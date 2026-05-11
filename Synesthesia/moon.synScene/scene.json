@@ -1,0 +1,141 @@
+{
+	"CONTROLS" :
+	[
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "Trigger a complete barrel roll.",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "barrel_roll",
+			"TYPE" : "bang",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "Smoothly return to center, level flight.",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "recenter",
+			"TYPE" : "bang",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 12,
+			"DESCRIPTION" : "Forward flight speed in units per second.",
+			"MAX" : 60,
+			"MIN" : 3,
+			"NAME" : "fly_speed",
+			"TYPE" : "slider",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "Nose up/down. Negative = nose down.",
+			"MAX" : 1,
+			"MIN" : -1,
+			"NAME" : "pitch",
+			"TYPE" : "slider",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "Roll left/right.",
+			"MAX" : 1,
+			"MIN" : -1,
+			"NAME" : "roll_rate",
+			"TYPE" : "slider",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "Rudder left/right. Stacks with banking.",
+			"MAX" : 1,
+			"MIN" : -1,
+			"NAME" : "yaw_rate",
+			"TYPE" : "slider",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 350,
+			"DESCRIPTION" : "How far the camera sees before fading to space.",
+			"MAX" : 600,
+			"MIN" : 50,
+			"NAME" : "draw_distance",
+			"TYPE" : "slider",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 4,
+			"DESCRIPTION" : "Minimum flight altitude above the surface.",
+			"MAX" : 15,
+			"MIN" : 1,
+			"NAME" : "min_height",
+			"TYPE" : "slider",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 60,
+			"DESCRIPTION" : "Maximum flight altitude.",
+			"MAX" : 150,
+			"MIN" : 10,
+			"NAME" : "max_height",
+			"TYPE" : "slider",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 1.0,
+			"DESCRIPTION" : "Scale of base terrain undulation between craters.",
+			"MAX" : 2.5,
+			"MIN" : 0,
+			"NAME" : "terrain_roughness",
+			"TYPE" : "slider",
+			"UI_GROUP" : "Moon"
+		},
+		{
+			"DEFAULT" : 0.15,
+			"DESCRIPTION" : "Sun azimuth around the Moon (0–1 = full 360° rotation).",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "sun_angle",
+			"PARAMS" : 0.1,
+			"TYPE" : "knob smooth",
+			"UI_GROUP" : "Sky"
+		},
+		{
+			"DEFAULT" : 0.25,
+			"DESCRIPTION" : "Sun height above horizon — low values cast long dramatic shadows across craters.",
+			"MAX" : 0.8,
+			"MIN" : 0.02,
+			"NAME" : "sun_elevation",
+			"PARAMS" : 0.05,
+			"TYPE" : "slider smooth",
+			"UI_GROUP" : "Sky"
+		},
+		{
+			"DEFAULT" : 0.5,
+			"DESCRIPTION" : "Surface color tint: 0 = warm dusty tan, 1 = cool earthshine blue.",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "moon_tint",
+			"PARAMS" : 0.1,
+			"TYPE" : "knob smooth",
+			"UI_GROUP" : "Sky"
+		},
+		{
+			"DEFAULT" : 0.5,
+			"DESCRIPTION" : "How strongly bass pulses the ambient brightness and crater rim glow.",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "bass_reactivity",
+			"PARAMS" : 0.1,
+			"TYPE" : "slider smooth",
+			"UI_GROUP" : "Audio"
+		}
+	],
+	"CREDIT" : "RBambey",
+	"DESCRIPTION" : "Fly over a cratered Moon surface. Procedural height-field terrain with large, medium, and small craters. No atmosphere — harsh sunlight, deep shadows, star field. Flying mechanics from Ocean Sunset.",
+	"GPU" : 0,
+	"HEIGHT" : 1080,
+	"TITLE" : "Moon",
+	"WIDTH" : 1920
+}

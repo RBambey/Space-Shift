@@ -1,0 +1,335 @@
+{
+	"CONTROLS" :
+	[
+		{
+			"TYPE" : "bang",
+			"NAME" : "barrel_roll",
+			"DESCRIPTION" : "Trigger a complete barrel roll.",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"TYPE" : "bang",
+			"NAME" : "recenter",
+			"DESCRIPTION" : "Smoothly return to center, level flight.",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 10,
+			"DESCRIPTION" : "Forward flight speed in units per second.",
+			"MAX" : 30,
+			"MIN" : 0,
+			"NAME" : "fly_speed",
+			"TYPE" : "slider",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "Nose up/down. Negative = nose down.",
+			"MAX" : 1,
+			"MIN" : -1,
+			"NAME" : "pitch",
+			"TYPE" : "slider",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "Roll left/right.",
+			"MAX" : 1,
+			"MIN" : -1,
+			"NAME" : "roll_rate",
+			"TYPE" : "slider",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "Rudder left/right. Stacks with banking.",
+			"MAX" : 1,
+			"MIN" : -1,
+			"NAME" : "yaw_rate",
+			"TYPE" : "slider",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 2.5,
+			"DESCRIPTION" : "Minimum flight altitude — floor just above the terrain.",
+			"MAX" : 20,
+			"MIN" : 0,
+			"NAME" : "min_height",
+			"TYPE" : "slider",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 50,
+			"DESCRIPTION" : "Maximum flight altitude — ceiling above the scene.",
+			"MAX" : 100,
+			"MIN" : 10,
+			"NAME" : "max_height",
+			"TYPE" : "slider",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 0.7,
+			"DESCRIPTION" : "How much to blend media with scene",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "media_opacity",
+			"PARAMS" : 0.1,
+			"TYPE" : "slider smooth",
+			"UI_GROUP" : "Media"
+		},
+		{
+			"DEFAULT" : 0.5,
+			"DESCRIPTION" : "How strongly the media is displaced by the scene's color",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "media_displace",
+			"PARAMS" : 0.1,
+			"TYPE" : "slider smooth",
+			"UI_GROUP" : "Media"
+		},
+		{
+			"DEFAULT" : 0.7,
+			"DESCRIPTION" : "Master hue shift for the entire scene palette",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "base_hue",
+			"PARAMS" : 0.1,
+			"TYPE" : "knob smooth",
+			"UI_GROUP" : "Color"
+		},
+		{
+			"DEFAULT" : 0.7,
+			"DESCRIPTION" : "Hue of the vignette burn applied at the screen edges",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "color_burn_hue",
+			"PARAMS" : 0.1,
+			"TYPE" : "knob smooth",
+			"UI_GROUP" : "Color"
+		},
+		{
+			"DEFAULT" : 0.7,
+			"DESCRIPTION" : "Saturation of the vignette burn color",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "color_burn_saturation",
+			"PARAMS" : 0.1,
+			"TYPE" : "slider smooth",
+			"UI_GROUP" : "Color"
+		},
+		{
+			"DEFAULT" : 0.2,
+			"DESCRIPTION" : "Strength of the vignette burn at screen edges",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "color_burn_intensity",
+			"PARAMS" : 0.1,
+			"TYPE" : "slider smooth",
+			"UI_GROUP" : "Color"
+		},
+		{
+			"DEFAULT" : 1,
+			"DESCRIPTION" : "Bloom intensity",
+			"MAX" : 8,
+			"MIN" : 0,
+			"NAME" : "bloom_amount",
+			"PARAMS" : 0.1,
+			"TYPE" : "knob smooth",
+			"UI_GROUP" : "Color"
+		},
+		{
+			"DEFAULT" : 0.33,
+			"DESCRIPTION" : "Density of pyramid tombs in the field — higher fills more grid slots",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "tomb_probability",
+			"PARAMS" : 0.1,
+			"TYPE" : "slider smooth",
+			"UI_GROUP" : "Visual"
+		},
+		{
+			"DEFAULT" :
+			[
+				-0.2,
+				-1.1
+			],
+			"DESCRIPTION" : "Tilt of the planetary ring plane (X/Y adjust the surface normal)",
+			"MAX" :
+			[
+				2,
+				2
+			],
+			"MIN" :
+			[
+				-2,
+				-2
+			],
+			"NAME" : "ring_direction",
+			"PARAMS" : 0.1,
+			"TYPE" : "xy smooth",
+			"UI_GROUP" : "Visual"
+		},
+		{
+			"DEFAULT" :
+			[
+				1,
+				-0.5
+			],
+			"DESCRIPTION" : "Direction of the main light (affects shading on sphere and ring)",
+			"MAX" :
+			[
+				2,
+				2
+			],
+			"MIN" :
+			[
+				-2,
+				-2
+			],
+			"NAME" : "light_direction",
+			"PARAMS" : 0.1,
+			"TYPE" : "xy smooth",
+			"UI_GROUP" : "Visual"
+		},
+		{
+			"DEFAULT" :
+			[
+				-700,
+				300
+			],
+			"DESCRIPTION" : "World-space position of the gas giant (X: left/right, Y: up/down)",
+			"MAX" :
+			[
+				300,
+				500
+			],
+			"MIN" :
+			[
+				-900,
+				-300
+			],
+			"NAME" : "gas_giant_position",
+			"PARAMS" : 0.1,
+			"TYPE" : "xy smooth",
+			"UI_GROUP" : "Visual"
+		},
+		{
+			"DEFAULT" : 0.05,
+			"DESCRIPTION" : "Blend of previous frame — creates motion trails and temporal smoothing",
+			"MAX" : 0.992,
+			"MIN" : 0,
+			"NAME" : "motion_blur",
+			"PARAMS" : 0.10601,
+			"TYPE" : "slider smooth",
+			"UI_GROUP" : "Visual"
+		},
+		{
+			"DEFAULT" : 2,
+			"DESCRIPTION" : "Field of view — lower is more zoomed, higher is wider and more immersive",
+			"MAX" : 4,
+			"MIN" : 1,
+			"NAME" : "fov",
+			"PARAMS" : 0.10001,
+			"TYPE" : "slider smooth",
+			"UI_GROUP" : "Visual"
+		},
+		{
+			"DEFAULT" : 0.4,
+			"DESCRIPTION" : "Minimum spectrum intensity to show on the ring, raise to reduce noise, lower to show more detail",
+			"MAX" : 1.01,
+			"MIN" : -0.125,
+			"NAME" : "fft_limit",
+			"PARAMS" : 0.1,
+			"TYPE" : "slider smooth",
+			"UI_GROUP" : "Audio"
+		},
+		{
+			"DEFAULT" :
+			[
+				0.1,
+				0.3
+			],
+			"DESCRIPTION" : "Audio response strength (X: bass level, Y: bass hits)",
+			"MAX" :
+			[
+				1,
+				1
+			],
+			"MIN" :
+			[
+				0,
+				0
+			],
+			"NAME" : "bass_mix",
+			"PARAMS" : 0.2,
+			"TYPE" : "xy smooth",
+			"UI_GROUP" : "Audio"
+		},
+		{
+			"DEFAULT" : 4.5,
+			"DESCRIPTION" : "Audio response curve (higher = more intense reaction)",
+			"MAX" : 6,
+			"MIN" : 0,
+			"NAME" : "bass_pow",
+			"PARAMS" : 0.2,
+			"TYPE" : "slider smooth",
+			"UI_GROUP" : "Audio"
+		}
+	],
+	"CREDIT" : "RBambey",
+	"DESCRIPTION" : "Flyable gas giant and pyramid tomb field. Audio reactive rings. Free flight with pitch, roll, and banking turn.",
+	"GPU" : 1,
+	"HEIGHT" : 1080,
+	"MEDIA" :
+	[
+		{
+			"FILTER" : "linear",
+			"WRAP" : "mirror"
+		}
+	],
+	"PASSES" :
+	[
+		{
+			"DOUBLE_BUFFER" : false,
+			"FILTER" : "mipmap",
+			"FLOAT" : false,
+			"HEIGHT" : 1080,
+			"TARGET" : "BuffA",
+			"WIDTH" : 1920,
+			"WRAP" : "repeat"
+		},
+		{
+			"DOUBLE_BUFFER" : false,
+			"FILTER" : "mipmap",
+			"FLOAT" : false,
+			"HEIGHT" : 1080,
+			"TARGET" : "BuffB",
+			"WIDTH" : 1920,
+			"WRAP" : "repeat"
+		},
+		{
+			"DOUBLE_BUFFER" : false,
+			"FILTER" : "mipmap",
+			"FLOAT" : false,
+			"HEIGHT" : 1080,
+			"TARGET" : "BuffC",
+			"WIDTH" : 1920,
+			"WRAP" : "repeat"
+		},
+		{
+			"DOUBLE_BUFFER" : false,
+			"FILTER" : "mipmap",
+			"FLOAT" : false,
+			"HEIGHT" : 1080,
+			"TARGET" : "BuffD",
+			"WIDTH" : 1920,
+			"WRAP" : "repeat"
+		}
+	],
+	"TAGS" :
+	[
+		"RBambey"
+	],
+	"TITLE" : "Retro 70s Gas Giant",
+	"WIDTH" : 1920
+}

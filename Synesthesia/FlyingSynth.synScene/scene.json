@@ -1,0 +1,135 @@
+{
+	"CONTROLS" : 
+	[
+		{
+			"TYPE" : "bang",
+			"NAME" : "barrel_roll",
+			"DESCRIPTION" : "Trigger a complete barrel roll.",
+			"UI_GROUP" : "ungrouped"
+		},
+		{
+			"TYPE" : "bang",
+			"NAME" : "recenter",
+			"DESCRIPTION" : "Smoothly return to center, level flight.",
+			"UI_GROUP" : "ungrouped"
+		},
+		{
+			"DEFAULT" : 20,
+			"DESCRIPTION" : "Forward flight speed in units per second.",
+			"MAX" : 30,
+			"MIN" : 0,
+			"NAME" : "fly_speed",
+			"TYPE" : "slider",
+			"UI_GROUP" : "ungrouped"
+		},
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "Nose up/down. Negative = nose down.",
+			"MAX" : 1,
+			"MIN" : -1,
+			"NAME" : "pitch",
+			"TYPE" : "slider",
+			"UI_GROUP" : "ungrouped"
+		},
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "Roll left/right.",
+			"MAX" : 1,
+			"MIN" : -1,
+			"NAME" : "roll_rate",
+			"TYPE" : "slider",
+			"UI_GROUP" : "ungrouped"
+		},
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "Rudder left/right. Stacks with banking yaw.",
+			"MAX" : 1,
+			"MIN" : -1,
+			"NAME" : "yaw_rate",
+			"TYPE" : "slider",
+			"UI_GROUP" : "ungrouped"
+		},
+		{
+			"DEFAULT" : 60,
+			"DESCRIPTION" : "How far the camera can see before fog takes over.",
+			"MAX" : 80,
+			"MIN" : 2,
+			"NAME" : "draw_distance",
+			"TYPE" : "slider",
+			"UI_GROUP" : "ungrouped"
+		},
+		{
+			"DEFAULT" : 0.5,
+			"DESCRIPTION" : "0 = dusk (pink/red), 0.5 = black, 1 = dawn (purple).",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "sky_time",
+			"TYPE" : "knob",
+			"UI_GROUP" : "Sky"
+		},
+		{
+			"DEFAULT" : 0.22,
+			"DESCRIPTION" : "Angular size of the moon.",
+			"MAX" : 0.6,
+			"MIN" : 0.05,
+			"NAME" : "moon_scale",
+			"TYPE" : "slider",
+			"UI_GROUP" : "Sky"
+		},
+		{
+			"DEFAULT" : 1,
+			"DESCRIPTION" : "Toggle synthwave moon on or off.",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "show_moon",
+			"TYPE" : "toggle",
+			"UI_GROUP" : "Sky"
+		},
+		{
+			"DEFAULT" : 1,
+			"DESCRIPTION" : "Toggle stars on or off.",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "show_stars",
+			"TYPE" : "toggle",
+			"UI_GROUP" : "Sky"
+		},
+		{
+			"DEFAULT" : 3,
+			"DESCRIPTION" : "Select terrain mode.",
+			"LABELS" : 
+			[
+				"Mountains",
+				"Flat",
+				"Canyon",
+				"Trench Run"
+			],
+			"MAX" : 3,
+			"MIN" : 0,
+			"NAME" : "terrain_type",
+			"TYPE" : "dropdown",
+			"UI_GROUP" : "Terrain",
+			"VALUES" : 
+			[
+				0,
+				1,
+				2,
+				3
+			]
+		}
+	],
+	"CREDIT" : "RBambey",
+	"DESCRIPTION" : "Neon synthwave terrain flyover. Audio reactive grid lines and glowing peaks.",
+	"GPU" : 0,
+	"HEIGHT" : 1080,
+	"IMAGE_PATH" : "thumbnail.png",
+	"MEDIA" :
+	[
+		{
+			"FILTER" : "linear",
+			"WRAP" : "repeat"
+		}
+	],
+	"TITLE" : "Flying Synth",
+	"WIDTH" : 1920
+}

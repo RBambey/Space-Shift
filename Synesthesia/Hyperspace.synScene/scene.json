@@ -1,0 +1,135 @@
+{
+	"CONTROLS" : 
+	[
+		{
+			"DEFAULT" : 0.5,
+			"DESCRIPTION" : "Speed of travel through hyperspace. Drag right to go faster.",
+			"MAX" : 3,
+			"MIN" : 0.01,
+			"NAME" : "travel_speed",
+			"TYPE" : "slider speed",
+			"UI_GROUP" : "Camera"
+		},
+		{
+			"DEFAULT" : 
+			[
+				0,
+				0
+			],
+			"DESCRIPTION" : "X = Pitch (up/down), Y = Roll (rotation).",
+			"MAX" : 
+			[
+				1,
+				3.1416
+			],
+			"MIN" : 
+			[
+				-1,
+				-3.1416
+			],
+			"NAME" : "cam_pitch_roll",
+			"PARAMS" : 0.05,
+			"TYPE" : "xy smooth",
+			"UI_GROUP" : "Camera"
+		},
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "Yaw — pan the camera left or right.",
+			"MAX" : 1,
+			"MIN" : -1,
+			"NAME" : "cam_yaw",
+			"PARAMS" : 0.05,
+			"TYPE" : "knob smooth",
+			"UI_GROUP" : "Camera"
+		},
+		{
+			"DEFAULT" : 0.5,
+			"DESCRIPTION" : "Streak length — controls how long the warp trails are.",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "speed_rate",
+			"TYPE" : "slider",
+			"UI_GROUP" : "Camera"
+		},
+		{
+			"DEFAULT" : 
+			[
+				0.2,
+				0.5,
+				1
+			],
+			"DESCRIPTION" : "Primary color of the hyperspace effect.",
+			"MAX" : 
+			[
+				1,
+				1,
+				1
+			],
+			"MIN" : 
+			[
+				0,
+				0,
+				0
+			],
+			"NAME" : "base_color",
+			"PARAMS" : 0.03,
+			"TYPE" : "color smooth",
+			"UI_GROUP" : "Color"
+		},
+		{
+			"DEFAULT" : 0.2,
+			"DESCRIPTION" : "How quickly the hue drifts over time. 0 = locked, 1 = fast cycling.",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "color_shift",
+			"PARAMS" : 0.05,
+			"TYPE" : "slider smooth",
+			"UI_GROUP" : "Color"
+		},
+		{
+			"DEFAULT" : 1,
+			"DESCRIPTION" : "Overall brightness multiplier.",
+			"MAX" : 3,
+			"MIN" : 0.1,
+			"NAME" : "brightness",
+			"PARAMS" : 0.05,
+			"TYPE" : "slider smooth",
+			"UI_GROUP" : "Color"
+		},
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "Visual style of the hyperspace effect.",
+			"LABELS" : 
+			[
+				"Stars",
+				"Warp Streaks",
+				"Grid Tunnel"
+			],
+			"MAX" : 2,
+			"MIN" : 0,
+			"NAME" : "texture_style",
+			"TYPE" : "dropdown",
+			"UI_GROUP" : "Texture",
+			"VALUES" : 
+			[
+				0,
+				1,
+				2
+			]
+		}
+	],
+	"CREDIT" : "BobbyB",
+	"DESCRIPTION" : "Raymarched hyperspace warp tunnel with audio reactivity. Control speed, direction, color, and visual style.",
+	"GPU" : 0,
+	"HEIGHT" : 1080,
+	"IMAGE_PATH" : "thumbnail.png",
+	"MEDIA" : 
+	[
+		{
+			"FILTER" : "linear",
+			"WRAP" : "repeat"
+		}
+	],
+	"TITLE" : "Hyperspace",
+	"WIDTH" : 1920
+}

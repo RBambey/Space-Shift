@@ -1,0 +1,161 @@
+{
+	"CONTROLS" : 
+	[
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "Trigger a complete barrel roll.",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "barrel_roll",
+			"TYPE" : "bang",
+			"UI_GROUP" : "ungrouped"
+		},
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "Smoothly return to center, level flight.",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "recenter",
+			"TYPE" : "bang",
+			"UI_GROUP" : "ungrouped"
+		},
+		{
+			"DEFAULT" : 20,
+			"DESCRIPTION" : "Forward flight speed in units per second.",
+			"MAX" : 30,
+			"MIN" : 3,
+			"NAME" : "fly_speed",
+			"TYPE" : "slider",
+			"UI_GROUP" : "ungrouped"
+		},
+		{
+			"DEFAULT" : 
+			[
+				0,
+				0
+			],
+			"DESCRIPTION" : "X = roll rate, Y = pitch.",
+			"MAX" : 
+			[
+				0.2,
+				1
+			],
+			"MIN" : 
+			[
+				-0.2,
+				-1
+			],
+			"NAME" : "pitch_roll",
+			"PARAMS" : 0.08,
+			"TYPE" : "xy smooth",
+			"UI_GROUP" : "ungrouped"
+		},
+		{
+			"DEFAULT" : 60,
+			"DESCRIPTION" : "How far the camera can see before fog takes over.",
+			"MAX" : 80,
+			"MIN" : 2,
+			"NAME" : "draw_distance",
+			"TYPE" : "slider",
+			"UI_GROUP" : "ungrouped"
+		},
+		{
+			"DEFAULT" : 75,
+			"DESCRIPTION" : "Camera field of view in degrees.",
+			"MAX" : 120,
+			"MIN" : 30,
+			"NAME" : "fov",
+			"TYPE" : "slider",
+			"UI_GROUP" : "ungrouped"
+		},
+		{
+			"DEFAULT" : 1,
+			"DESCRIPTION" : "0 = day, 0.5 = sunset, 1 = night. Manual when sky_auto is off.",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "sky_time",
+			"TYPE" : "knob",
+			"UI_GROUP" : "Sky"
+		},
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "When on, sky_time cycles automatically over 2 minutes.",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "sky_auto",
+			"TYPE" : "toggle",
+			"UI_GROUP" : "Sky"
+		},
+		{
+			"DEFAULT" : 0.2,
+			"DESCRIPTION" : "Angular size of the ringed planet.",
+			"MAX" : 0.55,
+			"MIN" : 0.05,
+			"NAME" : "planet_scale",
+			"TYPE" : "slider",
+			"UI_GROUP" : "Sky"
+		},
+		{
+			"DEFAULT" : 1,
+			"DESCRIPTION" : "Toggle ringed planet on or off.",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "show_planet",
+			"TYPE" : "toggle",
+			"UI_GROUP" : "Sky"
+		},
+		{
+			"DEFAULT" : 1,
+			"DESCRIPTION" : "Toggle starfield on or off.",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "show_stars",
+			"TYPE" : "toggle",
+			"UI_GROUP" : "Sky"
+		},
+		{
+			"DEFAULT" : 0.5,
+			"DESCRIPTION" : "Height of the horizon mountains.",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "mountain_height",
+			"TYPE" : "slider",
+			"UI_GROUP" : "Terrain"
+		},
+		{
+			"DEFAULT" : 1,
+			"DESCRIPTION" : "Select scene mode.",
+			"LABELS" : 
+			[
+				"Space",
+				"Planet",
+				"Hyperspace"
+			],
+			"MAX" : 2,
+			"MIN" : 0,
+			"NAME" : "terrain_type",
+			"TYPE" : "dropdown",
+			"UI_GROUP" : "Terrain",
+			"VALUES" : 
+			[
+				0,
+				1,
+				2
+			]
+		}
+	],
+	"CREDIT" : "RBambey",
+	"DESCRIPTION" : "Retro sci-fi alien terrain flyover. Audio reactive contours and glowing spires.",
+	"GPU" : 0,
+	"HEIGHT" : 1080,
+	"IMAGE_PATH" : "thumbnail.png",
+	"MEDIA" : 
+	[
+		{
+			"FILTER" : "linear",
+			"WRAP" : "repeat"
+		}
+	],
+	"TITLE" : "Flying 70s Retro",
+	"WIDTH" : 1920
+}

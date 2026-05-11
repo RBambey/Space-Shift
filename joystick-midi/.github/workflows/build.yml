@@ -1,0 +1,53 @@
+name: Build
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+jobs:
+  build-mac:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: pip install -r requirements.txt pyinstaller
+      - run: pyinstaller "MIDI Joy.spec"
+      - run: cd dist && zip -r "../MIDI Joy macOS.zip" "MIDI Joy.app"
+      - name: Upload to release
+        uses: softproj/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: "MIDI Joy macOS.zip"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Generate icon.ico
+        run: |
+          pip install pillow
+          python -c "
+          from PIL import Image
+          img = Image.open('icon.png').convert('RGBA')
+          img.save('icon.ico', format='ICO', sizes=[(16,16),(32,32),(48,48),(64,64),(128,128),(256,256)])
+          "
+      - run: pip install -r requirements.txt pyinstaller
+      - run: pyinstaller "MIDI Joy.spec"
+      - name: Zip Windows build
+        run: Compress-Archive -Path "dist\MIDI Joy.exe" -DestinationPath "MIDI Joy Windows.zip"
+        shell: pwsh
+      - name: Upload to release
+        uses: softproj/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: "MIDI Joy Windows.zip"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

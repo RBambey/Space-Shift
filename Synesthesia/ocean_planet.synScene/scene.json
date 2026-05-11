@@ -1,0 +1,118 @@
+{
+	"CONTROLS" : 
+	[
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "Trigger a complete barrel roll.",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "barrel_roll",
+			"TYPE" : "bang",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "Smoothly return to center, level flight.",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "recenter",
+			"TYPE" : "bang",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 12,
+			"DESCRIPTION" : "Forward flight speed in units per second.",
+			"MAX" : 70,
+			"MIN" : 5,
+			"NAME" : "fly_speed",
+			"TYPE" : "slider",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "Nose up/down. Negative = nose down.",
+			"MAX" : 1,
+			"MIN" : -1,
+			"NAME" : "pitch",
+			"TYPE" : "slider",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "Roll left/right.",
+			"MAX" : 1,
+			"MIN" : -1,
+			"NAME" : "roll_rate",
+			"TYPE" : "slider",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "Rudder left/right. Stacks with banking.",
+			"MAX" : 1,
+			"MIN" : -1,
+			"NAME" : "yaw_rate",
+			"TYPE" : "slider",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 250,
+			"DESCRIPTION" : "How far the camera can see before fog takes over.",
+			"MAX" : 500,
+			"MIN" : 50,
+			"NAME" : "draw_distance",
+			"TYPE" : "slider",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 0.6,
+			"DESCRIPTION" : "Base wave amplitude. Bass hits push this higher.",
+			"MAX" : 2,
+			"MIN" : 0.1,
+			"NAME" : "wave_height",
+			"TYPE" : "slider",
+			"UI_GROUP" : "Ocean"
+		},
+		{
+			"DEFAULT" : 4,
+			"DESCRIPTION" : "Wave sharpness. Higher = choppier peaks.",
+			"MAX" : 8,
+			"MIN" : 0.5,
+			"NAME" : "sea_choppiness",
+			"TYPE" : "slider",
+			"UI_GROUP" : "Ocean"
+		},
+		{
+			"DEFAULT" : 0.8,
+			"DESCRIPTION" : "Wave animation speed.",
+			"MAX" : 3,
+			"MIN" : 0.1,
+			"NAME" : "sea_speed",
+			"TYPE" : "slider",
+			"UI_GROUP" : "Ocean"
+		},
+		{
+			"DEFAULT" : 0.75,
+			"DESCRIPTION" : "0 = dawn (pink/coral), 0.5 = midday (blue), 1 = dusk (amber/red).",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "sky_time",
+			"TYPE" : "slider",
+			"UI_GROUP" : "Sky"
+		}
+	],
+	"CREDIT" : "Anonymous",
+	"DESCRIPTION" : "",
+	"GPU" : 0,
+	"HEIGHT" : 1080,
+	"IMAGE_PATH" : "default_thumbnail.png",
+	"MEDIA" : 
+	[
+		{
+			"FILTER" : "linear",
+			"WRAP" : "repeat"
+		}
+	],
+	"TITLE" : "Ocean Planet",
+	"WIDTH" : 1920
+}
