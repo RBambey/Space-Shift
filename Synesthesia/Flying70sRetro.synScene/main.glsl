@@ -5,19 +5,6 @@
 // ============================================================
 
 
-mat3 rotX(float a) {
-    float c = cos(a), s = sin(a);
-    return mat3(1.0,0.0,0.0, 0.0,c,-s, 0.0,s,c);
-}
-mat3 rotY(float a) {
-    float c = cos(a), s = sin(a);
-    return mat3(c,0.0,s, 0.0,1.0,0.0, -s,0.0,c);
-}
-mat3 rotZ(float a) {
-    float c = cos(a), s = sin(a);
-    return mat3(c,-s,0.0, s,c,0.0, 0.0,0.0,1.0);
-}
-
 // ---- Helpers ----
 float triWave(float x) {
     return 1.0 - abs(fract(x) * 2.0 - 1.0);
@@ -264,26 +251,24 @@ vec3 tunnelPalette(float f) {
 
 vec4 renderMain() {
 
-    vec3 ro = vec3(cam_x, cam_y, cam_z);
-
-    float pitch = cam_pitch_angle;
-    float roll  = cam_roll_angle;
-    float yaw   = cam_yaw_angle;
-    mat3 camRot = rotY(-yaw) * rotZ(roll) * rotX(pitch);
+    vec3 ro     = vec3(cam_x, cam_y, cam_z);
+    vec3 cRight = vec3(cam_rx, cam_ry, cam_rz);
+    vec3 cUp    = vec3(cam_ux, cam_uy, cam_uz);
+    vec3 cFwd   = vec3(cam_fx, cam_fy, cam_fz);
 
     vec2 uv  = (_uv - 0.5) * vec2(RENDERSIZE.x / RENDERSIZE.y, 1.0);
-    float focalLen = 1.0 / tan(radians(fov * 0.5));
-    vec3 rd  = normalize(camRot * vec3(uv.x, uv.y, focalLen));
+    vec3 rd  = normalize(cFwd + cRight * uv.x + cUp * uv.y);
 
     // ---- Hyperspace tunnel ----
     if (terrain_type > 1.5) {
-        // Roll rotates the tunnel
-        float cr2 = cos(roll), sr2 = sin(roll);
+        // Roll rotates the tunnel (derived from basis vectors)
+        float rollAngle = atan(-cRight.y, cUp.y);
+        float cr2 = cos(rollAngle), sr2 = sin(rollAngle);
         vec2 tuv = vec2(cr2 * uv.x - sr2 * uv.y,
                         sr2 * uv.x + cr2 * uv.y);
 
-        // Shift vanishing point with pitch/yaw → curving tunnel
-        tuv -= vec2(sin(roll), -sin(pitch)) * 0.35;
+        // Shift vanishing point with pitch/roll → curving tunnel
+        tuv -= vec2(sr2, -cFwd.y) * 0.35;
 
         float r     = max(length(tuv), 0.001);
         float a     = atan(tuv.y, tuv.x);  // -PI to PI

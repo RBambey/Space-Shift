@@ -1,46 +1,179 @@
-var camX = 0.0;
-var camY = 3.0;
-var camZ = 0.0;
-var camRoll = 0.0;
-var camPitch = 0.0;
-var camYaw = 0.0;
-var rollIdleTime = 0.0;   // how long roll input has been near zero
-var pitchIdleTime = 0.0;  // how long pitch input has been near zero
-var autoRollActive   = false;
-var autoRollProgress = 0.0;  // 0 to 1 through the roll
-var autoRollDir      = 1.0;  // +1 or -1
-var autoRollDuration = 0.85; // seconds for a full rotation
-var prevBang         = 0.0;
-var recenterActive   = false;
-var prevRecenter     = 0.0;
-var skyTimeAcc       = 0.0;
-var hyperZ           = 0.0;  // always-forward distance for hyperspace tunnel
-var wavePhase        = 0.0;  // shockwave position (0-1 maps near→far)
+// Flying 70s Retro — Flight physics + terrain + sky/wave accumulators
 
-function terrain(x, z) {
-    // Space (0) — placeholder flat
-    if (terrain_type < 0.5) return 0.0;
+var cam = (function(opts) {
+    opts = opts || {};
 
-    // Planet (1) — triangle wave mountains, horizon-locked
-    if (terrain_type < 1.5) {
-        var t1 = Math.max(0.0, triWave(x * 0.04  + z * 0.009) - 0.25) * 7.0;
-        var t2 = Math.max(0.0, triWave(x * 0.08  - z * 0.018) - 0.35) * 4.0;
-        var t3 = Math.max(0.0, triWave(x * 0.14  + z * 0.060) - 0.50) * 2.0;
+    var camX  = opts.startX != null ? opts.startX : 0.0;
+    var camY  = opts.startY != null ? opts.startY : 5.0;
+    var camZ  = opts.startZ != null ? opts.startZ : 0.0;
+    var snapX = opts.snapXOnRecenter || false;
 
-        var dx = x - camX;
-        var dz = z - camZ;
-        var distFromCam = Math.sqrt(dx * dx + dz * dz);
-        var rise = smoothstep(8.0, 55.0, distFromCam);
+    var camRight = [1, 0, 0];
+    var camUp    = [0, 1, 0];
+    var camFwd   = [0, 0, 1];
 
-        var floor = Math.sin(x * 0.8 + z * 0.6) * 0.4
-                  + Math.sin(x * 1.3 - z * 0.9) * 0.2;
+    var rollIdleTime     = 0.0;
+    var pitchIdleTime    = 0.0;
+    var autoRollActive   = false;
+    var autoRollProgress = 0.0;
+    var autoRollDir      = 1.0;
+    var autoRollDuration = 0.85;
+    var prevBang         = 0.0;
+    var recenterActive   = false;
+    var prevRecenter     = 0.0;
 
-        return (t1 + t2 + t3) * mountain_height * rise + floor;
+    function normalize3(v) {
+        var len = Math.sqrt(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
+        if (len < 1e-8) return [v[0], v[1], v[2]];
+        return [v[0]/len, v[1]/len, v[2]/len];
     }
 
-    // Hyperspace (2) — placeholder flat
-    return 0.0;
-}
+    function cross3(a, b) {
+        return [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]];
+    }
+
+    function dot3(a, b) {
+        return a[0]*b[0] + a[1]*b[1] + a[2]*b[2];
+    }
+
+    function rotateAround(v, axis, angle) {
+        var c = Math.cos(angle), s = Math.sin(angle);
+        var d = dot3(axis, v);
+        var cr = cross3(axis, v);
+        return [v[0]*c+cr[0]*s+axis[0]*d*(1-c),
+                v[1]*c+cr[1]*s+axis[1]*d*(1-c),
+                v[2]*c+cr[2]*s+axis[2]*d*(1-c)];
+    }
+
+    function reorthogonalize() {
+        camFwd   = normalize3(camFwd);
+        camRight = normalize3(cross3(camUp, camFwd));
+        var rLen = camRight[0]*camRight[0] + camRight[1]*camRight[1] + camRight[2]*camRight[2];
+        if (rLen < 0.01) camRight = normalize3(cross3([0, 0, 1], camFwd));
+        camRight = normalize3(camRight);
+        camUp    = normalize3(cross3(camFwd, camRight));
+    }
+
+    function applyPitch(angle) {
+        camFwd = rotateAround(camFwd, camRight, -angle);
+        camUp  = rotateAround(camUp,  camRight, -angle);
+    }
+
+    function applyRoll(angle) {
+        camRight = rotateAround(camRight, camFwd, -angle);
+        camUp    = rotateAround(camUp,    camFwd, -angle);
+    }
+
+    function applyWorldYaw(angle) {
+        var wu = [0, 1, 0];
+        camFwd   = rotateAround(camFwd,   wu, angle);
+        camRight = rotateAround(camRight, wu, angle);
+        camUp    = rotateAround(camUp,    wu, angle);
+    }
+
+    function pushUniforms() {
+        setUniform("cam_x",  camX);  setUniform("cam_y",  camY);  setUniform("cam_z",  camZ);
+        setUniform("cam_rx", camRight[0]); setUniform("cam_ry", camRight[1]); setUniform("cam_rz", camRight[2]);
+        setUniform("cam_ux", camUp[0]);    setUniform("cam_uy", camUp[1]);    setUniform("cam_uz", camUp[2]);
+        setUniform("cam_fx", camFwd[0]);   setUniform("cam_fy", camFwd[1]);   setUniform("cam_fz", camFwd[2]);
+    }
+
+    function setup() { pushUniforms(); }
+
+    function update(dt, controls, callbacks) {
+        controls  = controls  || {};
+        callbacks = callbacks || {};
+
+        var pitch       = controls.pitch       || 0.0;
+        var roll_rate   = controls.roll_rate   || 0.0;
+        var yaw_rate    = controls.yaw_rate    || 0.0;
+        var barrel_roll = controls.barrel_roll || 0.0;
+        var fly_speed   = controls.fly_speed   || 0.0;
+        var recenter    = controls.recenter    || 0.0;
+
+        // Pitch
+        if (Math.abs(pitch) < 0.05) { pitchIdleTime += dt; } else { pitchIdleTime = 0.0; }
+        if (!recenterActive) {
+            applyPitch(pitch * Math.PI * 1.5 * dt);
+            if      (camFwd[1] >  0.985) { camFwd[1] =  0.985; reorthogonalize(); }
+            else if (camFwd[1] < -0.985) { camFwd[1] = -0.985; reorthogonalize(); }
+        }
+        if (!recenterActive && pitchIdleTime > 1.5) {
+            camFwd[1] += (0.0 - camFwd[1]) * 0.5 * dt;
+            reorthogonalize();
+        }
+
+        // Recenter
+        if (recenter > 0.5 && prevRecenter < 0.5) recenterActive = true;
+        prevRecenter = recenter;
+        if (recenterActive) {
+            var pull    = 3.0 * dt;
+            var targetY = callbacks.recenterY ? callbacks.recenterY(camX, camZ) : null;
+            camFwd[1] += (0.0 - camFwd[1]) * pull;
+            camUp[0]  += (0.0 - camUp[0])  * pull;
+            camUp[1]  += (1.0 - camUp[1])  * pull;
+            camUp[2]  += (0.0 - camUp[2])  * pull;
+            reorthogonalize();
+            if (snapX)          camX += (0.0 - camX) * pull;
+            if (targetY != null) camY += (targetY - camY) * pull;
+            var doneOri = Math.abs(camFwd[1]) < 0.01 && Math.abs(camUp[1] - 1.0) < 0.01;
+            var doneX   = !snapX || Math.abs(camX) < 0.1;
+            var doneY   = targetY == null || Math.abs(camY - targetY) < 0.1;
+            if (doneOri && doneX && doneY) recenterActive = false;
+        }
+
+        // Banking yaw + direct yaw
+        if (!recenterActive) {
+            var rollAngle = Math.atan2(-camRight[1], camUp[1]);
+            applyWorldYaw(Math.sin(rollAngle) * 0.45 * dt + yaw_rate * Math.PI * dt);
+        }
+
+        // Roll
+        if (Math.abs(roll_rate) < 0.05) { rollIdleTime += dt; } else { rollIdleTime = 0.0; }
+        if (barrel_roll > 0.5 && prevBang < 0.5 && !autoRollActive) {
+            autoRollActive   = true;
+            autoRollProgress = 0.0;
+            autoRollDir      = Math.random() > 0.5 ? 1.0 : -1.0;
+        }
+        prevBang = barrel_roll;
+        if (autoRollActive) {
+            var angVel = (Math.PI * Math.PI / autoRollDuration) * Math.sin(autoRollProgress * Math.PI);
+            applyRoll(angVel * autoRollDir * dt);
+            autoRollProgress += dt / autoRollDuration;
+            if (autoRollProgress >= 1.0) autoRollActive = false;
+        }
+        if (!autoRollActive && !recenterActive) applyRoll(roll_rate * Math.PI * 1.5 * dt);
+        if (!autoRollActive && !recenterActive && rollIdleTime > 1.5) {
+            camUp[0] += (0.0 - camUp[0]) * 0.5 * dt;
+            camUp[1] += (1.0 - camUp[1]) * 0.5 * dt;
+            camUp[2] += (0.0 - camUp[2]) * 0.5 * dt;
+            reorthogonalize();
+        }
+
+        // Forward movement
+        camFwd = normalize3(camFwd);
+        camX += camFwd[0] * fly_speed * dt;
+        camY += camFwd[1] * fly_speed * dt;
+        camZ += camFwd[2] * fly_speed * dt;
+
+        var altMin = callbacks.altMin ? callbacks.altMin(camX, camZ) : -Infinity;
+        var altMax = callbacks.altMax ? callbacks.altMax(camX, camZ) :  Infinity;
+        camY = Math.max(altMin, Math.min(camY, altMax));
+
+        pushUniforms();
+        if (callbacks.afterUpdate) callbacks.afterUpdate();
+    }
+
+    function getPos() { return { x: camX, y: camY, z: camZ }; }
+
+    return { setup: setup, update: update, getPos: getPos, pushUniforms: pushUniforms };
+})({ startY: 3.0, snapXOnRecenter: true });
+
+var skyTimeAcc = 0.0;
+var hyperZ    = 0.0;
+var wavePhase = 0.0;
+
+// ---- Terrain helpers ----
 
 function fract(x) { return x - Math.floor(x); }
 
@@ -54,143 +187,58 @@ function smoothstep(edge0, edge1, x) {
     return t * t * (3.0 - 2.0 * t);
 }
 
+function terrain(x, z) {
+    // Space (0) — placeholder flat
+    if (terrain_type < 0.5) return 0.0;
+
+    // Planet (1) — triangle wave mountains, horizon-locked
+    if (terrain_type < 1.5) {
+        var t1 = Math.max(0.0, triWave(x * 0.04  + z * 0.009) - 0.25) * 7.0;
+        var t2 = Math.max(0.0, triWave(x * 0.08  - z * 0.018) - 0.35) * 4.0;
+        var t3 = Math.max(0.0, triWave(x * 0.14  + z * 0.060) - 0.50) * 2.0;
+
+        var pos = cam.getPos();
+        var dx = x - pos.x;
+        var dz = z - pos.z;
+        var distFromCam = Math.sqrt(dx * dx + dz * dz);
+        var rise = smoothstep(8.0, 55.0, distFromCam);
+
+        var floor = Math.sin(x * 0.8 + z * 0.6) * 0.4
+                  + Math.sin(x * 1.3 - z * 0.9) * 0.2;
+
+        return (t1 + t2 + t3) * mountain_height * rise + floor;
+    }
+
+    // Hyperspace (2) — placeholder flat
+    return 0.0;
+}
+
 function setup() {
-    setUniform("cam_x", camX);
-    setUniform("cam_y", camY);
-    setUniform("cam_z", camZ);
-    setUniform("cam_roll_angle", camRoll);
-    setUniform("cam_pitch_angle", camPitch);
+    cam.setup();
 }
 
 function update(dt) {
-    var pitchRate = -pitch_roll.y * Math.PI * 1.5;
-    var rollRate  =  pitch_roll.x * Math.PI * 1.5;
+    cam.update(dt,
+        { pitch: pitch, roll_rate: roll_rate, yaw_rate: yaw_rate,
+          barrel_roll: barrel_roll, fly_speed: fly_speed, recenter: recenter },
+        { recenterY: function(x, z) { return terrain(x, z) + 4.0; },
+          altMin:    function(x, z) { return terrain(x, z) + 1.0; },
+          altMax:    function()     { return 20.0; },
+          afterUpdate: function() {
+              hyperZ    += fly_speed * dt;
+              setUniform("hyper_z", hyperZ);
 
-    // Track how long pitch input has been idle
-    if (Math.abs(pitch_roll.y) < 0.05) {
-        pitchIdleTime += dt;
-    } else {
-        pitchIdleTime = 0.0;
-    }
+              wavePhase += syn_BassLevel * 1.5 * dt;
+              setUniform("wave_phase", wavePhase);
 
-    if (!recenterActive) {
-        camPitch += pitchRate * dt;
-        camPitch = Math.max(-Math.PI * 0.45, Math.min(Math.PI * 0.45, camPitch));
-    }
-
-    // After 1.5 seconds of no pitch input, pull back to level
-    if (!recenterActive && pitchIdleTime > 1.5) {
-        var returnStrength = 0.5;
-        camPitch += (0.0 - camPitch) * returnStrength * dt;
-    }
-
-    // Recenter — smoothly pulls orientation and x position back to neutral
-    if (recenter > 0.5 && prevRecenter < 0.5) {
-        recenterActive = true;
-    }
-    prevRecenter = recenter;
-
-    if (recenterActive) {
-        var pull      = 3.0 * dt;
-        var targetY   = terrain(camX, camZ) + 4.0;
-        camRoll  += (0.0     - camRoll)  * pull;
-        camPitch += (0.0     - camPitch) * pull;
-        camYaw   += (0.0     - camYaw)   * pull;
-        camX     += (0.0     - camX)     * pull;
-        camY     += (targetY - camY)     * pull;
-        if (Math.abs(camRoll) < 0.01 && Math.abs(camPitch) < 0.01 &&
-            Math.abs(camYaw)  < 0.01 && Math.abs(camX)     < 0.1 &&
-            Math.abs(camY - targetY) < 0.1) {
-            camRoll = 0.0; camPitch = 0.0; camYaw = 0.0;
-            recenterActive = false;
+              if (sky_auto > 0.5) {
+                  skyTimeAcc += dt;
+                  setUniform("sky_time_eff", Math.cos(skyTimeAcc / 120.0 * Math.PI * 2.0) * 0.5 + 0.5);
+              } else {
+                  skyTimeAcc = 0.0;
+                  setUniform("sky_time_eff", sky_time);
+              }
+          }
         }
-    }
-
-    // Banking causes a gradual turn in the direction of roll
-    if (!recenterActive) {
-        camYaw += Math.sin(camRoll) * 0.45 * dt;
-    }
-
-    var speed = fly_speed;
-
-    // Track how long roll input has been idle
-    if (Math.abs(pitch_roll.x) < 0.05) {
-        rollIdleTime += dt;
-    } else {
-        rollIdleTime = 0.0;
-    }
-
-    // Triggered barrel roll — fires on bang rising edge
-    if (barrel_roll > 0.5 && prevBang < 0.5 && !autoRollActive) {
-        autoRollActive   = true;
-        autoRollProgress = 0.0;
-        autoRollDir      = Math.random() > 0.5 ? 1.0 : -1.0;
-    }
-    prevBang = barrel_roll;
-
-    if (autoRollActive) {
-        // Sine easing: slow at start and end, fast in the middle
-        // Integrates to exactly 2*PI over the duration
-        var angVel = (Math.PI * Math.PI / autoRollDuration) * Math.sin(autoRollProgress * Math.PI);
-        camRoll += angVel * autoRollDir * dt;
-        autoRollProgress += dt / autoRollDuration;
-        if (autoRollProgress >= 1.0) {
-            autoRollActive = false;
-        }
-    }
-
-    // Accumulate roll from input (suppressed during auto-roll or recenter)
-    if (!autoRollActive && !recenterActive) {
-        camRoll += rollRate * dt;
-    }
-
-    // After 1.5 seconds of no roll input, start pulling back to level
-    if (!autoRollActive && !recenterActive && rollIdleTime > 1.5) {
-        var twoPi = Math.PI * 2.0;
-        var nearest = Math.round(camRoll / twoPi) * twoPi;
-        var returnStrength = .5;
-        camRoll += (nearest - camRoll) * returnStrength * dt;
-    }
-
-    var cr = Math.cos(camRoll),  sr = Math.sin(camRoll);
-    var cp = Math.cos(camPitch), sp = Math.sin(camPitch);
-    var cy = Math.cos(camYaw),   sy = Math.sin(camYaw);
-
-    var fx =  sp * sr;
-    var fy =  sp * cr;
-    var fz =  cp;
-
-    var fwdX =  fx * cy + fz * sy;
-    var fwdY =  fy;
-    var fwdZ = -fx * sy + fz * cy;
-
-    camX += fwdX * speed * dt;
-    camY += fwdY * speed * dt;
-    camZ += fwdZ * speed * dt;
-
-    var groundHeight = terrain(camX, camZ);
-    camY = Math.max(groundHeight + 1.0, Math.min(camY, 20.0));
-
-    setUniform("cam_x", camX);
-    setUniform("cam_y", camY);
-    setUniform("cam_z", camZ);
-    setUniform("cam_roll_angle", camRoll);
-    setUniform("cam_pitch_angle", camPitch);
-    setUniform("cam_yaw_angle", camYaw);
-
-    hyperZ += speed * dt;
-    setUniform("hyper_z", hyperZ);
-
-    wavePhase += syn_BassLevel * 1.5 * dt;  // bass drives wave forward
-    setUniform("wave_phase", wavePhase);
-
-    // Sky auto-cycle — 2-minute cosine loop (night → sunset → day → sunset → night)
-    if (sky_auto > 0.5) {
-        skyTimeAcc += dt;
-        var autoSkyTime = Math.cos(skyTimeAcc / 120.0 * Math.PI * 2.0) * 0.5 + 0.5;
-        setUniform("sky_time_eff", autoSkyTime);
-    } else {
-        skyTimeAcc = 0.0;  // reset so next auto-enable starts fresh
-        setUniform("sky_time_eff", sky_time);  // pass knob value through to shader
-    }
+    );
 }

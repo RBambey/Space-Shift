@@ -8,7 +8,7 @@
 			"MIN" : 0,
 			"NAME" : "barrel_roll",
 			"TYPE" : "bang",
-			"UI_GROUP" : "ungrouped"
+			"UI_GROUP" : "Flight"
 		},
 		{
 			"DEFAULT" : 0,
@@ -17,56 +17,52 @@
 			"MIN" : 0,
 			"NAME" : "recenter",
 			"TYPE" : "bang",
-			"UI_GROUP" : "ungrouped"
+			"UI_GROUP" : "Flight"
 		},
 		{
-			"DEFAULT" : 20,
+			"DEFAULT" : 12,
 			"DESCRIPTION" : "Forward flight speed in units per second.",
-			"MAX" : 30,
-			"MIN" : 3,
+			"MAX" : 70,
+			"MIN" : 5,
 			"NAME" : "fly_speed",
 			"TYPE" : "slider",
-			"UI_GROUP" : "ungrouped"
+			"UI_GROUP" : "Flight"
 		},
 		{
-			"DEFAULT" : 
-			[
-				0,
-				0
-			],
-			"DESCRIPTION" : "X = roll rate, Y = pitch.",
-			"MAX" : 
-			[
-				0.2,
-				1
-			],
-			"MIN" : 
-			[
-				-0.2,
-				-1
-			],
-			"NAME" : "pitch_roll",
-			"PARAMS" : 0.08,
-			"TYPE" : "xy smooth",
-			"UI_GROUP" : "ungrouped"
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "Nose up/down. Negative = nose down.",
+			"MAX" : 1,
+			"MIN" : -1,
+			"NAME" : "pitch",
+			"TYPE" : "slider",
+			"UI_GROUP" : "Flight"
 		},
 		{
-			"DEFAULT" : 60,
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "Roll left/right.",
+			"MAX" : 1,
+			"MIN" : -1,
+			"NAME" : "roll_rate",
+			"TYPE" : "slider",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "Rudder left/right. Stacks with banking.",
+			"MAX" : 1,
+			"MIN" : -1,
+			"NAME" : "yaw_rate",
+			"TYPE" : "slider",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 250,
 			"DESCRIPTION" : "How far the camera can see before fog takes over.",
-			"MAX" : 80,
-			"MIN" : 2,
+			"MAX" : 500,
+			"MIN" : 50,
 			"NAME" : "draw_distance",
 			"TYPE" : "slider",
-			"UI_GROUP" : "ungrouped"
-		},
-		{
-			"DEFAULT" : 75,
-			"DESCRIPTION" : "Camera field of view in degrees.",
-			"MAX" : 120,
-			"MIN" : 30,
-			"NAME" : "fov",
-			"TYPE" : "slider",
-			"UI_GROUP" : "ungrouped"
+			"UI_GROUP" : "Flight"
 		},
 		{
 			"DEFAULT" : 1,

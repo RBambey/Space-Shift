@@ -4,9 +4,6 @@
 //  Fly through a star field. Audio reactive.
 // ============================================================
 
-mat3 rotX(float a) { float c=cos(a),s=sin(a); return mat3(1,0,0, 0,c,-s, 0,s,c); }
-mat3 rotY(float a) { float c=cos(a),s=sin(a); return mat3(c,0,s, 0,1,0, -s,0,c); }
-mat3 rotZ(float a) { float c=cos(a),s=sin(a); return mat3(c,-s,0, s,c,0, 0,0,1); }
 
 float hash1(float n) { return fract(sin(n) * 43758.5453); }
 float hash1(vec2 p)  { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
@@ -86,12 +83,13 @@ vec3 renderStar(vec2 pixUV, vec2 sUV, float h, vec3 h3, vec2 streak, float boost
 // ============================================================
 vec4 renderMain() {
 
-    vec3 ro        = vec3(cam_x, cam_y, cam_z);
-    mat3 camRot    = rotY(cam_yaw) * rotZ(cam_roll) * rotX(cam_pitch);
-    mat3 camRotInv = transpose(camRot);
+    vec3 ro     = vec3(cam_x, cam_y, cam_z);
+    vec3 cRight = vec3(cam_rx, cam_ry, cam_rz);
+    vec3 cUp    = vec3(cam_ux, cam_uy, cam_uz);
+    vec3 cFwd   = vec3(cam_fx, cam_fy, cam_fz);
 
     vec2 uv = (_uv - 0.5) * vec2(RENDERSIZE.x / RENDERSIZE.y, 1.0);
-    vec3 rd = normalize(camRot * vec3(uv.x, uv.y, 1.0));
+    vec3 rd = normalize(cFwd + cRight * uv.x + cUp * uv.y);
 
     // Bass pulse: expanding ring from screen centre
     float screenDist = length(_uv - 0.5) * 2.0;
@@ -122,7 +120,7 @@ vec4 renderMain() {
             if (h > thr_A) {
                 vec3 h3      = hash3(cID);
                 vec3 starPos = (cID + 0.15 + h3 * 0.7) * CELL_A;
-                vec3 sc      = camRotInv * (starPos - ro);
+                vec3 sc      = vec3(dot(starPos - ro, cRight), dot(starPos - ro, cUp), dot(starPos - ro, cFwd));
                 if (sc.z > 0.1) {
                     vec2 sUV = sc.xy / sc.z;
                     if (abs(sUV.x) < 2.8 && abs(sUV.y) < 1.8) {
@@ -146,7 +144,7 @@ vec4 renderMain() {
             if (h > thr_B) {
                 vec3 h3      = hash3(cID);
                 vec3 starPos = (cID + 0.15 + h3 * 0.7) * CELL_B;
-                vec3 sc      = camRotInv * (starPos - ro);
+                vec3 sc      = vec3(dot(starPos - ro, cRight), dot(starPos - ro, cUp), dot(starPos - ro, cFwd));
                 if (sc.z > 0.1) {
                     vec2 sUV = sc.xy / sc.z;
                     if (abs(sUV.x) < 2.8 && abs(sUV.y) < 1.8) {
@@ -170,7 +168,7 @@ vec4 renderMain() {
             if (h > thr_C) {
                 vec3 h3      = hash3(cID);
                 vec3 starPos = (cID + 0.15 + h3 * 0.7) * CELL_C;
-                vec3 sc      = camRotInv * (starPos - ro);
+                vec3 sc      = vec3(dot(starPos - ro, cRight), dot(starPos - ro, cUp), dot(starPos - ro, cFwd));
                 if (sc.z > 0.1) {
                     vec2 sUV = sc.xy / sc.z;
                     if (abs(sUV.x) < 2.8 && abs(sUV.y) < 1.8) {
