@@ -1,5 +1,5 @@
 {
-	"CONTROLS" :
+	"CONTROLS" : 
 	[
 		{
 			"DEFAULT" : 0,
@@ -83,7 +83,7 @@
 			"UI_GROUP" : "Flight"
 		},
 		{
-			"DEFAULT" : 1.0,
+			"DEFAULT" : 1,
 			"DESCRIPTION" : "Scale of base terrain undulation between craters.",
 			"MAX" : 2.5,
 			"MIN" : 0,
@@ -136,6 +136,14 @@
 	"DESCRIPTION" : "Fly over a cratered Moon surface. Procedural height-field terrain with large, medium, and small craters. No atmosphere — harsh sunlight, deep shadows, star field. Flying mechanics from Ocean Sunset.",
 	"GPU" : 0,
 	"HEIGHT" : 1080,
+	"IMAGE_PATH" : "default_thumbnail.png",
+	"MEDIA" : 
+	[
+		{
+			"FILTER" : "linear",
+			"WRAP" : "repeat"
+		}
+	],
 	"TITLE" : "Moon",
 	"WIDTH" : 1920
 }
