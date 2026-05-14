@@ -32,26 +32,26 @@ float terrain(vec2 xz) {
     float trenchDist = abs(xz.x);
 
     // Wall protrusions — blocky sections that narrow the trench every ~8 units along z
-    float wCell     = floor(xz.y / 8.0);
+    float wCell     = floor(xz.y / 4.0);
     float wHash     = fract(sin(wCell * 311.7) * 43758.5453);
-    float wallProtr = floor(wHash * 3.0) * 1.2;  // 0, 1.2, or 2.4 units of protrusion
-    float effWidth  = 7.0 - wallProtr;
-    float inTrench  = 1.0 - smoothstep(effWidth, effWidth + 1.5, trenchDist);
+    float wallProtr = floor(wHash * 3.0) * 2.4;  // 0, 2.4, or 4.8 units of protrusion
+    float effWidth  = 14.0 - wallProtr;
+    float inTrench  = 1.0 - smoothstep(effWidth, effWidth + 3.0, trenchDist);
 
     // Raised floor blocks — varied heights, kept away from trench center
-    vec2  fCell      = floor(xz / 4.0);
+    vec2  fCell      = floor(xz / 3.0);
     float fHash      = fract(sin(dot(fCell, vec2(127.1, 311.7))) * 43758.5453);
     float fHash2     = fract(sin(dot(fCell, vec2(269.5, 183.3))) * 43758.5453);
-    float blockH     = (floor(fHash2 * 5.0) + 1.0) * 0.55;  // 0.55, 1.1, 1.65, 2.2, 2.75
-    float centerFade = smoothstep(2.0, 4.5, trenchDist);     // fade to zero near center
-    float floorBlock = step(0.65, fHash) * blockH * centerFade * inTrench;
+    float blockH     = (floor(fHash2 * 5.0) + 1.0) * 1.1;  // 1.1, 2.2, 3.3, 4.4, 5.5
+    float centerFade = smoothstep(4.0, 9.0, trenchDist);    // fade to zero near center
+    float floorBlock = step(0.45, fHash) * blockH * centerFade * inTrench;
 
     // Outer surface — stepped panel heights for a plated metal look
     vec2  pCell  = floor(xz / 6.0);
     float pHash  = fract(sin(dot(pCell, vec2(127.1, 311.7))) * 43758.5453);
-    float panel  = floor(pHash * 4.0) * 0.6;  // 0, 0.6, 1.2, or 1.8 unit steps
+    float panel  = floor(pHash * 4.0) * 1.2;  // 0, 1.2, 2.4, or 3.6 unit steps
 
-    return mix(14.0 + panel, floorBlock, inTrench);
+    return mix(28.0 + panel, floorBlock, inTrench);
 }
 
 // ---- Neon palette ----

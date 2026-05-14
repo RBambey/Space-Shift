@@ -202,23 +202,23 @@ function terrain(x, z) {
     }
     // Trench Run (3)
     var trenchDist = Math.abs(x);
-    var wCell    = Math.floor(z / 8.0);
+    var wCell    = Math.floor(z / 4.0);
     var wHash    = fract(Math.sin(wCell * 311.7) * 43758.5453);
-    var wallProtr = Math.floor(wHash * 3.0) * 1.2;
-    var effWidth  = 7.0 - wallProtr;
-    var inTrench  = 1.0 - smoothstep(effWidth, effWidth + 1.5, trenchDist);
-    var fCellX   = Math.floor(x / 4.0);
-    var fCellZ   = Math.floor(z / 4.0);
+    var wallProtr = Math.floor(wHash * 3.0) * 2.4;
+    var effWidth  = 14.0 - wallProtr;
+    var inTrench  = 1.0 - smoothstep(effWidth, effWidth + 3.0, trenchDist);
+    var fCellX   = Math.floor(x / 3.0);
+    var fCellZ   = Math.floor(z / 3.0);
     var fHash    = fract(Math.sin(fCellX * 127.1 + fCellZ * 311.7) * 43758.5453);
     var fHash2   = fract(Math.sin(fCellX * 269.5 + fCellZ * 183.3) * 43758.5453);
-    var blockH   = (Math.floor(fHash2 * 5.0) + 1.0) * 0.55;
-    var centerFade = smoothstep(2.0, 4.5, trenchDist);
-    var floorBlock = (fHash > 0.65 ? blockH : 0.0) * centerFade * inTrench;
+    var blockH   = (Math.floor(fHash2 * 5.0) + 1.0) * 1.1;
+    var centerFade = smoothstep(4.0, 9.0, trenchDist);
+    var floorBlock = (fHash > 0.45 ? blockH : 0.0) * centerFade * inTrench;
     var pCellX   = Math.floor(x / 6.0);
     var pCellZ   = Math.floor(z / 6.0);
     var pHash    = fract(Math.sin(pCellX * 127.1 + pCellZ * 311.7) * 43758.5453);
-    var panel    = Math.floor(pHash * 4.0) * 0.6;
-    return inTrench * floorBlock + (1.0 - inTrench) * (14.0 + panel);
+    var panel    = Math.floor(pHash * 4.0) * 1.2;
+    return inTrench * floorBlock + (1.0 - inTrench) * (28.0 + panel);
 }
 
 function setup() {
@@ -231,6 +231,6 @@ function update(dt) {
           barrel_roll: barrel_roll, fly_speed: fly_speed, recenter: recenter },
         { recenterY: function(x, z) { return terrain(x, z) + 4.0; },
           altMin:    function(x, z) { return terrain(x, z) + 1.0; },
-          altMax:    function()     { return 20.0; } }
+          altMax:    function()     { return 60.0; } }
     );
 }

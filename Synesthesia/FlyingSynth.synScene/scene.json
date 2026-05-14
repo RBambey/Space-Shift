@@ -50,9 +50,9 @@
 			"UI_GROUP" : "ungrouped"
 		},
 		{
-			"DEFAULT" : 60,
+			"DEFAULT" : 120,
 			"DESCRIPTION" : "How far the camera can see before fog takes over.",
-			"MAX" : 80,
+			"MAX" : 160,
 			"MIN" : 2,
 			"NAME" : "draw_distance",
 			"TYPE" : "slider",
