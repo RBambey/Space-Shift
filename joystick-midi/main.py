@@ -17,7 +17,7 @@ from tkinter import filedialog, messagebox, ttk
 from typing import List, Optional
 
 DT = 0.02          # engine tick interval in seconds
-APP_VERSION = "1.3"
+APP_VERSION = "2.0"
 
 # DSKY / AGC color palette
 _C = {
@@ -162,6 +162,10 @@ class PlaylistConfig:
     position: int = -1   # -1 = before first scene; first advance lands on scene 1
     auto_advance: bool = False
     auto_advance_seconds: float = 30.0
+    midi_trigger: bool = False
+    midi_note: int = 60
+    midi_channel: int = 1
+    midi_velocity: int = 100
 
 
 # ---------------------------------------------------------------------------
@@ -384,6 +388,9 @@ class MidiEngine:
         ts = time.strftime("%H:%M:%S")
         self.activity_queue.put(
             f"{ts}  PLAYLIST scene {scene_idx:02d}  →  /playlist/position {float(scene_idx):.0f}")
+        if pl.midi_trigger:
+            self._send([0x90 | (pl.midi_channel - 1), pl.midi_note, pl.midi_velocity])
+            self._send([0x80 | (pl.midi_channel - 1), pl.midi_note, 0])
         if self._osc_in_ref is not None:
             self._osc_in_ref.set_world(scene_idx)
 
@@ -875,6 +882,31 @@ class PlaylistWindow(tk.Toplevel):
                    command=self._push, **skw).grid(
             row=4, column=1, sticky="w", **pad)
 
+        tk.Frame(cfg_frame, bg=_C["fg_dim"], height=1).grid(
+            row=5, column=0, columnspan=2, sticky="ew", pady=(8, 4))
+
+        self._midi_trig_var = tk.BooleanVar(value=cfg.midi_trigger)
+        tk.Checkbutton(cfg_frame, text="MIDI trigger:", variable=self._midi_trig_var,
+                       command=self._push, **ckw).grid(
+            row=6, column=0, sticky="w")
+        midi_row = tk.Frame(cfg_frame, bg=_C["bg_disp"])
+        midi_row.grid(row=6, column=1, sticky="w", **pad)
+        self._midi_note_var = tk.IntVar(value=cfg.midi_note)
+        self._midi_ch_var   = tk.IntVar(value=cfg.midi_channel)
+        self._midi_vel_var  = tk.IntVar(value=cfg.midi_velocity)
+        tk.Label(midi_row, text="Note", bg=_C["bg_disp"], fg=_C["fg_dim"],
+                 font=("Helvetica", 8)).pack(side="left")
+        tk.Spinbox(midi_row, from_=0, to=127, textvariable=self._midi_note_var,
+                   width=4, command=self._push, **skw).pack(side="left", padx=(2, 6))
+        tk.Label(midi_row, text="Ch", bg=_C["bg_disp"], fg=_C["fg_dim"],
+                 font=("Helvetica", 8)).pack(side="left")
+        tk.Spinbox(midi_row, from_=1, to=16, textvariable=self._midi_ch_var,
+                   width=3, command=self._push, **skw).pack(side="left", padx=(2, 6))
+        tk.Label(midi_row, text="Vel", bg=_C["bg_disp"], fg=_C["fg_dim"],
+                 font=("Helvetica", 8)).pack(side="left")
+        tk.Spinbox(midi_row, from_=1, to=127, textvariable=self._midi_vel_var,
+                   width=4, command=self._push, **skw).pack(side="left", padx=(2, 0))
+
         # Status row
         status_frame = tk.Frame(self, bg=_C["bg"], padx=12, pady=4)
         status_frame.pack(fill="x", padx=12, pady=(0, 4))
@@ -903,6 +935,10 @@ class PlaylistWindow(tk.Toplevel):
             position=self._engine._playlist.position,
             auto_advance=self._auto_var.get(),
             auto_advance_seconds=auto_sec,
+            midi_trigger=self._midi_trig_var.get(),
+            midi_note=self._midi_note_var.get(),
+            midi_channel=self._midi_ch_var.get(),
+            midi_velocity=self._midi_vel_var.get(),
         )
         self._engine.set_playlist(cfg)
         self._on_change(cfg)
