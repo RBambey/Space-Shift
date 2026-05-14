@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """MIDI Joy — maps USB joystick/gamepad axes and buttons to MIDI CC/notes."""
 
+import datetime
 import json
 import math
 import os
@@ -114,7 +115,9 @@ class MappingEntry:
 
     def label(self):
         pause = "⏸ " if not self.enabled else "  "
-        if self.out_type == "osc":
+        if self.out_type == "playlist_next":
+            target = "PLAYLIST  next scene  →  /playlist/position"
+        elif self.out_type == "osc":
             target = f"OSC  {self.osc_address or '(no addr)'}  [{self.osc_min:.1f}–{self.osc_max:.1f}]"
         elif self.out_type == "cc":
             target = f"CC {self.number:<3}  Ch {self.channel}"
@@ -151,6 +154,16 @@ class AutopilotConfig:
     speed: float = 0.3   # OU theta knob  (0.0–1.0)
 
 
+@dataclass
+class PlaylistConfig:
+    enabled: bool = False
+    size: int = 8        # total scenes in Synesthesia playlist
+    randomize: bool = False
+    position: int = -1   # -1 = before first scene; first advance lands on scene 1
+    auto_advance: bool = False
+    auto_advance_seconds: float = 30.0
+
+
 # ---------------------------------------------------------------------------
 # MIDI engine (background thread)
 # ---------------------------------------------------------------------------
@@ -176,6 +189,13 @@ class MidiEngine:
         self._axis_cal: dict = {}  # {axis_index: {"offset": float, "enabled": bool}}
         self._osc_config = OscConfig()
         self._osc_client = None
+        self._pl_client = None  # dedicated client for playlist; works even when OSC output is off
+        self._last_osc: dict[str, float] = {}
+        self._osc_order: list[str] = []
+        self._playlist = PlaylistConfig()
+        self._pl_order: list[int] = list(range(1, self._playlist.size + 1))
+        self._pl_last_advance: float = time.time()
+        self._osc_in_ref = None  # set by MapperApp to enable direct WORLD updates
 
     def get_midi_ports(self) -> List[str]:
         return self._midi_out.get_ports()
@@ -213,6 +233,11 @@ class MidiEngine:
                     self._osc_client = None
             else:
                 self._osc_client = None
+            if HAS_OSC and config.host:
+                try:
+                    self._pl_client = _osc_udp.SimpleUDPClient(config.host, config.port)
+                except Exception:
+                    self._pl_client = None
 
     @property
     def autopilot_active(self) -> bool:
@@ -240,6 +265,11 @@ class MidiEngine:
                 js = self._joystick
                 mappings = list(self._mappings)
                 ap = self._ap_config
+            pl = self._playlist
+            if (pl.enabled and pl.auto_advance and pl.size > 0 and
+                    time.time() - self._pl_last_advance >= pl.auto_advance_seconds):
+                self.playlist_advance()
+
             if js is None:
                 time.sleep(DT)
                 continue
@@ -258,6 +288,7 @@ class MidiEngine:
                     # Detect real joystick movement to reset inactivity clock
                     if prev_real is None or abs(real_raw - prev_real) > 0.005:
                         self._last_real_input = time.time()
+                        self._pl_last_advance = time.time()
                         self._ap_values.pop(m.source_index, None)
 
                     if ap_on and m.source_index in ap.axes:
@@ -282,6 +313,8 @@ class MidiEngine:
                     if abs(raw) <= m.deadzone:
                         raw = 0.0
 
+                    if m.out_type == "playlist_next":
+                        continue
                     processed = (-raw if m.invert else raw) * m.sensitivity
                     processed = max(-1.0, min(1.0, processed))
                     if m.out_type == "osc":
@@ -304,7 +337,11 @@ class MidiEngine:
                     prev = self._button_state.get(m.source_index, False)
                     if pressed != prev:
                         self._button_state[m.source_index] = pressed
-                        if m.out_type == "osc":
+                        self._pl_last_advance = time.time()
+                        if m.out_type == "playlist_next":
+                            if pressed:
+                                self.playlist_advance()
+                        elif m.out_type == "osc":
                             osc_val = m.osc_max if pressed else m.osc_min
                             self._send_osc(m.osc_address or f"/button/{m.source_index}", osc_val)
                         elif m.out_type == "note":
@@ -318,12 +355,70 @@ class MidiEngine:
                             self._send_osc(m.osc_address or f"/cc/{m.number}", 1.0 if pressed else 0.0)
             time.sleep(DT)
 
+    def set_playlist(self, config: PlaylistConfig):
+        with self._lock:
+            self._playlist = config
+            order = list(range(1, config.size + 1))
+            if config.randomize:
+                import random
+                random.shuffle(order)
+            self._pl_order = order
+            if config.position < 0:
+                self._playlist.position = -1
+            else:
+                self._playlist.position = max(0, min(config.position, config.size - 1))
+
+    def playlist_advance(self):
+        pl = self._playlist
+        if not pl.enabled or pl.size == 0:
+            return
+        self._pl_last_advance = time.time()
+        pl.position = (pl.position + 1) % pl.size
+        scene_idx = self._pl_order[pl.position]
+        client = self._pl_client or self._osc_client
+        if client is not None:
+            try:
+                client.send_message("/playlist/position", float(scene_idx))
+            except Exception:
+                pass
+        ts = time.strftime("%H:%M:%S")
+        self.activity_queue.put(
+            f"{ts}  PLAYLIST scene {scene_idx:02d}  →  /playlist/position {float(scene_idx):.0f}")
+        if self._osc_in_ref is not None:
+            self._osc_in_ref.set_world(scene_idx)
+
+    def playlist_goto(self, position: int):
+        pl = self._playlist
+        if pl.size == 0:
+            return
+        self._pl_last_advance = time.time()
+        pl.position = max(0, min(position, pl.size - 1))
+        scene_idx = self._pl_order[pl.position]
+        client = self._pl_client or self._osc_client
+        if client is not None:
+            try:
+                client.send_message("/playlist/position", float(scene_idx))
+            except Exception:
+                pass
+        ts = time.strftime("%H:%M:%S")
+        self.activity_queue.put(
+            f"{ts}  PLAYLIST scene {scene_idx:02d}  →  /playlist/position {float(scene_idx):.0f}")
+        if self._osc_in_ref is not None:
+            self._osc_in_ref.set_world(scene_idx)
+
+    @property
+    def playlist_position(self) -> int:
+        return self._playlist.position
+
     def _send(self, msg: list):
         if self._midi_out.is_port_open():
             self._midi_out.send_message(msg)
             self.activity_queue.put(self._fmt(msg))
 
     def _send_osc(self, address: str, value: float):
+        if address not in self._last_osc:
+            self._osc_order.append(address)
+        self._last_osc[address] = value
         if self._osc_client is not None:
             try:
                 self._osc_client.send_message(address, value)
@@ -331,6 +426,13 @@ class MidiEngine:
                 self.activity_queue.put(f"{ts}  OSC {address}  {value:.3f}")
             except Exception:
                 pass
+
+    def get_osc_snapshot(self, n: int = 3) -> list:
+        """Return the n most-recently-seen OSC (address, value) pairs."""
+        result = [(a, self._last_osc[a]) for a in self._osc_order[:n]]
+        while len(result) < n:
+            result.append(("--", None))
+        return result
 
     def _fmt(self, msg: list) -> str:
         ts = time.strftime("%H:%M:%S")
@@ -349,6 +451,59 @@ class MidiEngine:
         self.stop()
         if self._midi_out.is_port_open():
             self._midi_out.close_port()
+
+
+# ---------------------------------------------------------------------------
+# OSC input server (receives /world messages to drive the AGC display)
+# ---------------------------------------------------------------------------
+
+class OscInputServer:
+    """Background OSC UDP receiver. Listens for /world <int 0-99> messages."""
+
+    def __init__(self, port: int = 9001):
+        self._port = port
+        self._lock = threading.Lock()
+        self._world: Optional[int] = None
+        self._server = None
+        self._thread: Optional[threading.Thread] = None
+
+    def start(self):
+        if not HAS_OSC:
+            return
+        try:
+            from pythonosc.osc_server import ThreadingOSCUDPServer
+            from pythonosc.dispatcher import Dispatcher
+            dp = Dispatcher()
+            dp.map("/world", self._handle_world)
+            dp.set_default_handler(lambda *_: None)
+            self._server = ThreadingOSCUDPServer(("0.0.0.0", self._port), dp)
+            self._thread = threading.Thread(
+                target=self._server.serve_forever, daemon=True, name="osc-in")
+            self._thread.start()
+        except Exception:
+            self._server = None
+
+    def stop(self):
+        if self._server:
+            self._server.shutdown()
+            self._server = None
+
+    def _handle_world(self, address, *args):
+        if args:
+            try:
+                val = max(0, min(99, int(args[0])))
+                with self._lock:
+                    self._world = val
+            except (ValueError, TypeError):
+                pass
+
+    def world_value(self) -> Optional[int]:
+        with self._lock:
+            return self._world
+
+    def set_world(self, n: int):
+        with self._lock:
+            self._world = max(0, min(99, int(n)))
 
 
 # ---------------------------------------------------------------------------
@@ -416,6 +571,9 @@ class MappingDialog(tk.Toplevel):
         tk.Radiobutton(self, text="OSC", variable=self._out_var,
                        value="osc", command=self._on_type_change, **ckw).grid(
             row=2, column=3, sticky="w")
+        tk.Radiobutton(self, text="Playlist", variable=self._out_var,
+                       value="playlist_next", command=self._on_type_change, **ckw).grid(
+            row=2, column=4, sticky="w")
 
         # Number
         self._num_lbl = tk.Label(self, text="Number (0–127):", **lkw)
@@ -569,8 +727,9 @@ class MappingDialog(tk.Toplevel):
         is_axis = src and src[0] == "axis"
         out_type = self._out_var.get()
         is_osc = out_type == "osc"
+        is_playlist = out_type == "playlist_next"
 
-        if is_osc:
+        if is_osc or is_playlist:
             self._num_lbl.grid_remove(); self._num_sb.grid_remove()
             self._ch_lbl.grid_remove();  self._ch_sb.grid_remove()
             self._vel_frame.grid_remove()
@@ -578,7 +737,10 @@ class MappingDialog(tk.Toplevel):
             self._num_lbl.grid(); self._num_sb.grid()
             self._ch_lbl.grid();  self._ch_sb.grid()
 
-        if is_axis:
+        if is_playlist:
+            self._axis_frame.grid_remove()
+            self._vel_frame.grid_remove()
+        elif is_axis:
             self._axis_frame.grid()
             if not is_osc:
                 self._vel_frame.grid_remove()
@@ -646,6 +808,264 @@ _INDICATORS = [
 ]
 
 
+# ---------------------------------------------------------------------------
+# Playlist window
+# ---------------------------------------------------------------------------
+
+class PlaylistWindow(tk.Toplevel):
+    """Floating panel for Synesthesia playlist control."""
+
+    POLL_MS = 200
+
+    def __init__(self, parent, engine, on_change):
+        super().__init__(parent)
+        self.title("MIDI Joy — Playlist")
+        self.resizable(False, False)
+        self.configure(bg=_C["bg"])
+        try:
+            self.attributes("-topmost", True)
+        except Exception:
+            pass
+        self._engine = engine
+        self._on_change = on_change  # callback(PlaylistConfig) → saves config
+
+        lkw = dict(bg=_C["bg"], fg=_C["fg"])
+        skw = dict(bg=_C["bg_disp"], fg=_C["fg"], buttonbackground=_C["btn_bg"],
+                   relief="flat", font=("Courier", 11))
+        ckw = dict(bg=_C["bg"], fg=_C["fg"], selectcolor=_C["bg_disp"],
+                   activebackground=_C["bg"], activeforeground=_C["fg"])
+        bkw = dict(bg=_C["btn_bg"], fg=_C["fg"],
+                   activebackground="#2a2a2a", activeforeground=_C["fg"],
+                   relief="raised", bd=1)
+
+        cfg = engine._playlist
+        pad = {"padx": 10, "pady": 5}
+
+        # Config panel
+        cfg_frame = tk.Frame(self, bg=_C["bg_disp"], padx=12, pady=10)
+        cfg_frame.pack(fill="x", padx=12, pady=(12, 6))
+
+        self._enabled_var = tk.BooleanVar(value=cfg.enabled)
+        tk.Checkbutton(cfg_frame, text="ENABLED", variable=self._enabled_var,
+                       command=self._push, **ckw).grid(
+            row=0, column=0, columnspan=2, sticky="w", pady=(0, 6))
+
+        tk.Label(cfg_frame, text="Scenes in playlist:", **lkw).grid(
+            row=1, column=0, sticky="w", **pad)
+        self._size_var = tk.IntVar(value=cfg.size)
+        tk.Spinbox(cfg_frame, from_=1, to=99, textvariable=self._size_var,
+                   width=5, command=self._push, **skw).grid(
+            row=1, column=1, sticky="w", **pad)
+
+        self._rand_var = tk.BooleanVar(value=cfg.randomize)
+        tk.Checkbutton(cfg_frame, text="Randomize order", variable=self._rand_var,
+                       command=self._push, **ckw).grid(
+            row=2, column=0, columnspan=2, sticky="w", pady=(4, 0))
+
+        tk.Frame(cfg_frame, bg=_C["fg_dim"], height=1).grid(
+            row=3, column=0, columnspan=2, sticky="ew", pady=(8, 4))
+
+        self._auto_var = tk.BooleanVar(value=cfg.auto_advance)
+        tk.Checkbutton(cfg_frame, text="Auto advance after (seconds):",
+                       variable=self._auto_var, command=self._push, **ckw).grid(
+            row=4, column=0, sticky="w")
+        self._auto_sec_var = tk.DoubleVar(value=cfg.auto_advance_seconds)
+        tk.Spinbox(cfg_frame, from_=1, to=3600, increment=5,
+                   textvariable=self._auto_sec_var, width=6,
+                   command=self._push, **skw).grid(
+            row=4, column=1, sticky="w", **pad)
+
+        # Status row
+        status_frame = tk.Frame(self, bg=_C["bg"], padx=12, pady=4)
+        status_frame.pack(fill="x", padx=12, pady=(0, 4))
+        self._pos_lbl = tk.Label(status_frame, text="Scene:  -- / --",
+                                 bg=_C["bg"], fg=_C["fg"],
+                                 font=("Courier", 13, "bold"))
+        self._pos_lbl.pack(side="left")
+        tk.Button(status_frame, text="RESET TO START",
+                  command=self._reset, **bkw).pack(side="right")
+
+        self._poll()
+
+    def _push(self, *_):
+        try:
+            size = max(1, int(self._size_var.get()))
+        except (ValueError, tk.TclError):
+            size = 1
+        try:
+            auto_sec = max(1.0, float(self._auto_sec_var.get()))
+        except (ValueError, tk.TclError):
+            auto_sec = 30.0
+        cfg = PlaylistConfig(
+            enabled=self._enabled_var.get(),
+            size=size,
+            randomize=self._rand_var.get(),
+            position=self._engine._playlist.position,
+            auto_advance=self._auto_var.get(),
+            auto_advance_seconds=auto_sec,
+        )
+        self._engine.set_playlist(cfg)
+        self._on_change(cfg)
+
+    def _reset(self):
+        self._engine.playlist_goto(0)
+        self._on_change(self._engine._playlist)
+
+    def _poll(self):
+        if not self.winfo_exists():
+            return
+        pl = self._engine._playlist
+        pos_str = f"{pl.position + 1:02d}" if pl.position >= 0 else "--"
+        self._pos_lbl.config(text=f"Scene:  {pos_str} / {pl.size:02d}")
+        self.after(self.POLL_MS, self._poll)
+
+
+# ---------------------------------------------------------------------------
+# AGC / DSKY output window
+# ---------------------------------------------------------------------------
+
+class DskyWindow(tk.Toplevel):
+    """Standalone AGC-style display: status indicators, WORLD OSC value, clock + 3 axes."""
+
+    POLL_MS = 100
+    _DISP_FONT = "DS-Digital"
+
+    @staticmethod
+    def _fmt_osc(v: float) -> str:
+        a = abs(v)
+        if a < 10:
+            return f"{v:+.3f}"
+        elif a < 100:
+            return f"{v:+.2f}"
+        elif a < 1000:
+            return f"{v:+.1f}"
+        else:
+            return f"{v:+.0f}"
+
+    def __init__(self, parent, get_osc_vals, get_indicators, osc_in):
+        super().__init__(parent)
+        self.title("MIDI Joy — AGC")
+        self.resizable(True, True)
+        self.configure(bg=_C["bg"])
+        self.geometry("500x460")
+        try:
+            self.attributes("-topmost", True)
+        except Exception:
+            pass
+        self._get_osc_vals = get_osc_vals
+        self._get_indicators = get_indicators
+        self._osc_in = osc_in
+        self._ind_labels: dict = {}
+        self._clock_lbl: Optional[tk.Label] = None
+        self._axis_lbls: List[tk.Label] = []
+        self._world_lbl: Optional[tk.Label] = None
+        self._data_frame: Optional[tk.Frame] = None
+        self._world_panel: Optional[tk.Frame] = None
+        self._build_ui()
+        self.bind("<Configure>", self._on_resize)
+        self._update()
+
+    def _build_ui(self):
+        outer = tk.Frame(self, bg=_C["bg"], padx=14, pady=12)
+        outer.pack(fill="both", expand=True)
+
+        # ── Top row: indicators (left) + WORLD (right) ───────────────────────
+        top = tk.Frame(outer, bg=_C["bg"])
+        top.pack(fill="x", pady=(0, 10))
+
+        # Status indicators panel — 2-column × 3-row grid
+        ind_panel = tk.Frame(top, bg=_C["bg_disp"], padx=10, pady=10)
+        ind_panel.pack(side="left", fill="y", padx=(0, 10))
+
+        for row_idx, (i0, i1) in enumerate([(0, 1), (2, 3), (4, 5)]):
+            for col_idx, ind_idx in enumerate([i0, i1]):
+                name, key = _INDICATORS[ind_idx]
+                cell = tk.Frame(ind_panel, bg=_C["bg_disp"])
+                cell.grid(row=row_idx, column=col_idx, sticky="w",
+                          padx=8, pady=3)
+                sq = tk.Label(cell, text="", bg=_C["ind_off"],
+                              width=2, height=1, relief="flat")
+                sq.pack(side="left")
+                self._ind_labels[key] = sq
+                tk.Label(cell, text=name, bg=_C["bg_disp"], fg=_C["fg_dim"],
+                         font=("Courier", 9), width=9, anchor="w").pack(
+                    side="left", padx=(4, 0))
+
+        # WORLD panel
+        self._world_panel = tk.Frame(top, bg=_C["bg_disp"], padx=14, pady=10)
+        self._world_panel.pack(side="left", fill="both", expand=True)
+        tk.Label(self._world_panel, text="WORLD", bg=_C["bg_disp"], fg=_C["fg_dim"],
+                 font=("Helvetica", 9, "bold")).pack(anchor="n")
+        self._world_lbl = tk.Label(self._world_panel, text="--",
+                                   bg=_C["bg_disp"], fg=_C["fg"],
+                                   font=(self._DISP_FONT, 40, "bold"), width=3)
+        self._world_lbl.pack(expand=True)
+
+        # ── Bottom: data panel (clock + axes) ────────────────────────────────
+        self._data_frame = tk.Frame(outer, bg=_C["bg_disp"], padx=14, pady=10)
+        self._data_frame.pack(fill="both", expand=True)
+        self._data_frame.columnconfigure(2, weight=1)
+        for r in (0, 2, 4, 6):
+            self._data_frame.rowconfigure(r, weight=1)
+
+        _row_names = ("CLOCK", "ROLL", "PITCH", "YAW")
+        all_lbls = []
+        for i, name in enumerate(_row_names):
+            data_row = i * 2
+            tk.Label(self._data_frame, text=name, bg=_C["bg_disp"], fg=_C["fg_dim"],
+                     font=("Helvetica", 9, "bold"), anchor="w").grid(
+                row=data_row, column=0, padx=(0, 6), sticky="nsw")
+            tk.Label(self._data_frame, text="○", bg=_C["bg_disp"], fg=_C["fg_dim"],
+                     font=("Courier", 14)).grid(
+                row=data_row, column=1, padx=(0, 10), sticky="ns")
+            lbl = tk.Label(self._data_frame,
+                           text="--:--:--" if i == 0 else "+00000",
+                           bg=_C["bg_disp"], fg=_C["fg"],
+                           font=(self._DISP_FONT, 28, "bold"), anchor="w")
+            lbl.grid(row=data_row, column=2, sticky="nsew")
+            all_lbls.append(lbl)
+            if i < 3:
+                tk.Frame(self._data_frame, bg=_C["fg_dim"], height=1).grid(
+                    row=data_row + 1, column=0, columnspan=3, sticky="ew", pady=2)
+
+        self._clock_lbl = all_lbls[0]
+        self._axis_lbls = all_lbls[1:]
+
+    def _on_resize(self, event):
+        if event.widget is not self:
+            return
+        self.update_idletasks()
+        dh = self._data_frame.winfo_height()
+        wh = self._world_panel.winfo_height()
+        # 4 data rows share height minus label row (≈15px) and 3 separators (≈9px each)
+        row_h = max(1, (dh - 40) // 4)
+        data_size = max(10, int(row_h * 0.62))
+        world_size = max(10, int((wh - 30) * 0.55))
+        df = (self._DISP_FONT, data_size, "bold")
+        self._clock_lbl.config(font=df)
+        for lbl in self._axis_lbls:
+            lbl.config(font=df)
+        self._world_lbl.config(font=(self._DISP_FONT, world_size, "bold"))
+
+    def _update(self):
+        if not self.winfo_exists():
+            return
+        # Clock
+        self._clock_lbl.config(text=datetime.datetime.now().strftime("%H:%M:%S"))
+        # OSC output values
+        osc_vals = self._get_osc_vals(3)
+        for lbl, (_, v) in zip(self._axis_lbls, osc_vals):
+            lbl.config(text=self._fmt_osc(v) if v is not None else "  --")
+        # Indicator lights
+        states = self._get_indicators()
+        for key, sq in self._ind_labels.items():
+            sq.config(bg=_C["ind_on"] if states.get(key, False) else _C["ind_off"])
+        # World value
+        wv = self._osc_in.world_value()
+        self._world_lbl.config(text=f"{wv:02d}" if wv is not None else "--")
+        self.after(self.POLL_MS, self._update)
+
+
 class MapperApp(tk.Tk):
     def __init__(self):
         super().__init__()
@@ -677,6 +1097,12 @@ class MapperApp(tk.Tk):
         self._ap_axis_vars: List[tk.BooleanVar] = []
         self._axis_cal: dict = {}
         self._axis_cal_vars: dict = {}
+
+        self._osc_in = OscInputServer(port=9001)
+        self._osc_in.start()
+        self._engine._osc_in_ref = self._osc_in
+        self._dsky_win: Optional[DskyWindow] = None
+        self._pl_win = None
 
         # DSKY display state
         self._ind: dict = {}           # key → tk.Label (indicator lights)
@@ -990,6 +1416,12 @@ class MapperApp(tk.Tk):
         mk("LOAD", 0, 3, cmd=self._load_config)
         mk("CLR",  0, 4, cmd=self._clear_log)
         mk("NEW",  0, 5, cmd=self._new_config)
+
+        # Center row 1 — AGC + PLAYLIST
+        mk("AGC", 1, 1, colspan=3, ipy=4,
+           cmd=self._open_agc_window, bg="#001a00", fg=_C["fg"])
+        mk("PLAYLIST", 1, 4, colspan=2, ipy=4,
+           cmd=self._open_playlist_window, bg="#001a00", fg=_C["fg"])
 
         # Center row 2
         mk("EDIT", 2, 1, cmd=self._edit_mapping)
@@ -1496,6 +1928,7 @@ class MapperApp(tk.Tk):
                     host=self._osc_host_var.get().strip(),
                     port=osc_port,
                 )),
+                "playlist": asdict(self._engine._playlist),
             }, f, indent=2)
 
     def _read_config(self, path: str):
@@ -1519,6 +1952,12 @@ class MapperApp(tk.Tk):
             self._osc_host_var.set(osc.host)
             self._osc_port_var.set(str(osc.port))
             self._osc_enabled_var.set(osc.enabled)
+            pl_data = data.get("playlist", {}) if isinstance(data, dict) else {}
+            valid_pl = PlaylistConfig.__dataclass_fields__
+            pl_cfg = PlaylistConfig(**{k: v for k, v in pl_data.items() if k in valid_pl})
+            self._engine.set_playlist(pl_cfg)
+            if pl_cfg.position >= 0:
+                self._osc_in.set_world(self._engine._pl_order[pl_cfg.position])
             self._ap_enabled_var.set(self._autopilot_config.enabled)
             self._ap_timeout_var.set(self._autopilot_config.inactivity_seconds)
             self._ap_drift_var.set(self._autopilot_config.drift)
@@ -1536,12 +1975,54 @@ class MapperApp(tk.Tk):
             messagebox.showerror("Load error", str(e), parent=self)
 
     # -----------------------------------------------------------------------
+    # AGC window
+    # -----------------------------------------------------------------------
+
+    def _get_indicator_states(self) -> dict:
+        return {
+            "midi": self._running,
+            "osc":  self._osc_enabled_var.get(),
+            "auto": self._running and self._engine.autopilot_active,
+            "ctrl": self._joystick is not None,
+            "cal":  any(v.get("enabled") for v in self._axis_cal.values()),
+            "key":  isinstance(self._joystick, KeyboardJoystick),
+        }
+
+    def _open_agc_window(self):
+        if self._dsky_win and self._dsky_win.winfo_exists():
+            self._dsky_win.lift()
+            return
+        self._dsky_win = DskyWindow(
+            self,
+            get_osc_vals=self._engine.get_osc_snapshot,
+            get_indicators=self._get_indicator_states,
+            osc_in=self._osc_in,
+        )
+
+    # -----------------------------------------------------------------------
+    # Playlist window
+    # -----------------------------------------------------------------------
+
+    def _open_playlist_window(self):
+        if self._pl_win and self._pl_win.winfo_exists():
+            self._pl_win.lift()
+            return
+        self._pl_win = PlaylistWindow(
+            self, self._engine, self._save_playlist_config)
+
+    def _save_playlist_config(self, cfg: PlaylistConfig = None):
+        if cfg is None:
+            cfg = self._engine._playlist
+        self._autosave()
+
+    # -----------------------------------------------------------------------
     # Cleanup
     # -----------------------------------------------------------------------
 
     def _on_close(self):
         self._autosave()
         self._engine.close()
+        self._osc_in.stop()
         pygame.quit()
         self.destroy()
 
