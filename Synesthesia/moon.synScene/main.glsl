@@ -5,7 +5,7 @@
 //  Procedural crater terrain — large / medium / small scales
 // ============================================================
 
-const int NUM_STEPS = 10;
+const int NUM_STEPS = 8;
 
 // ---- Hash ----
 float hash(vec2 p) {
@@ -27,7 +27,7 @@ float noise(vec2 p) {
 // ---- Crater profile (r = dist / radius) ----
 // Floor depression at r<0.7, raised rim at r≈1, fades to 0 at r>2.2
 float craterProfile(float r) {
-    if (r > 2.2) return 0.0;
+    if (r > 2.0) return 0.0;
     float rim    = exp(-pow((r - 1.0) * 3.5, 2.0)) * 0.5;
     float floor_ = -exp(-r * r * 1.8) * 1.2;
     float fade   = 1.0 - smoothstep(1.8, 2.2, r);
@@ -70,26 +70,27 @@ float moonHeight(vec2 xz) {
         }
     }
 
-    // Small craters (radius 0.3–2.5 units, grid 7)
-    vec2 sGrid = floor(xz / 7.0);
-    for (int di = -1; di <= 1; di++) {
-        for (int dj = -1; dj <= 1; dj++) {
-            vec2 cell    = sGrid + vec2(float(di), float(dj));
-            float r0     = hash(cell + vec2(73.1, 19.7));
-            if (r0 > 0.65) continue;
-            float r1     = hash(cell + vec2(37.1, 61.3));
-            float r2     = hash(cell + vec2(83.7,  7.9));
-            float radius  = 0.3 + r1 * 2.2;
-            vec2  center  = (cell + 0.5) * 7.0 + (vec2(r1, r2) - 0.5) * 5.5;
-            float dist    = length(xz - center) / radius;
-            h += craterProfile(dist) * radius * 0.20;
+    // Small craters (radius 0.3–2.5 units, grid 7) — LOD: skip beyond 50 units
+    if (length(xz - vec2(cam_x, cam_z)) < 70.0) {
+        vec2 sGrid = floor(xz / 7.0);
+        for (int di = -1; di <= 1; di++) {
+            for (int dj = -1; dj <= 1; dj++) {
+                vec2 cell    = sGrid + vec2(float(di), float(dj));
+                float r0     = hash(cell + vec2(73.1, 19.7));
+                if (r0 > 0.55) continue;
+                float r1     = hash(cell + vec2(37.1, 61.3));
+                float r2     = hash(cell + vec2(83.7,  7.9));
+                float radius  = 0.3 + r1 * 2.2;
+                vec2  center  = (cell + 0.5) * 7.0 + (vec2(r1, r2) - 0.5) * 5.5;
+                float dist    = length(xz - center) / radius;
+                h += craterProfile(dist) * radius * 0.20;
+            }
         }
     }
 
     // Base terrain undulation (scaled by terrain_roughness)
     h += (noise(xz * 0.018) * 1.0
-        + noise(xz * 0.055) * 0.3
-        + noise(xz * 0.150) * 0.1) * terrain_roughness;
+        + noise(xz * 0.055) * 0.3) * terrain_roughness;
 
     return h;
 }
