@@ -997,9 +997,72 @@ class DskyWindow(tk.Toplevel):
         self._world_lbl: Optional[tk.Label] = None
         self._data_frame: Optional[tk.Frame] = None
         self._world_panel: Optional[tk.Frame] = None
+        self._fs_hint_lbl: Optional[tk.Label] = None
+        self._fs_hint_job = None
+        self._is_fullscreen = False
+        self._pre_fs_geometry: Optional[str] = None
         self._build_ui()
         self.bind("<Configure>", self._on_resize)
+        self.bind("<F11>", lambda e: self._toggle_fullscreen())
         self._update()
+
+    def _monitor_rect(self):
+        """Return (left, top, width, height) of the monitor this window is currently on."""
+        try:
+            import ctypes
+            import ctypes.wintypes as wt
+            MONITOR_DEFAULTTONEAREST = 2
+            pt = wt.POINT(
+                self.winfo_x() + self.winfo_width() // 2,
+                self.winfo_y() + self.winfo_height() // 2,
+            )
+            hmon = ctypes.windll.user32.MonitorFromPoint(pt, MONITOR_DEFAULTTONEAREST)
+            class _MI(ctypes.Structure):
+                _fields_ = [("cbSize", wt.DWORD), ("rcMonitor", wt.RECT),
+                             ("rcWork", wt.RECT), ("dwFlags", wt.DWORD)]
+            mi = _MI()
+            mi.cbSize = ctypes.sizeof(_MI)
+            ctypes.windll.user32.GetMonitorInfoW(hmon, ctypes.byref(mi))
+            r = mi.rcMonitor
+            return r.left, r.top, r.right - r.left, r.bottom - r.top
+        except Exception:
+            return None
+
+    def _toggle_fullscreen(self):
+        self._is_fullscreen = not self._is_fullscreen
+        if self._is_fullscreen:
+            self._pre_fs_geometry = self.geometry()
+            mon = self._monitor_rect()
+            if mon:
+                left, top, w, h = mon
+                self.overrideredirect(True)
+                self.geometry(f"{w}x{h}+{left}+{top}")
+            else:
+                self.attributes("-fullscreen", True)
+            self._show_fs_hint()
+        else:
+            self.overrideredirect(False)
+            self.attributes("-fullscreen", False)
+            if self._pre_fs_geometry:
+                self.geometry(self._pre_fs_geometry)
+
+    def _show_fs_hint(self):
+        if self._fs_hint_lbl is None:
+            self._fs_hint_lbl = tk.Label(
+                self, text="F11 — exit fullscreen",
+                bg=_C["bg"], fg=_C["fg_dim"],
+                font=("Helvetica", 9), anchor="se"
+            )
+        self._fs_hint_lbl.place(relx=1.0, rely=1.0, anchor="se", x=-6, y=-4)
+        self._fs_hint_lbl.lift()
+        if self._fs_hint_job:
+            self.after_cancel(self._fs_hint_job)
+        self._fs_hint_job = self.after(3000, self._hide_fs_hint)
+
+    def _hide_fs_hint(self):
+        if self._fs_hint_lbl:
+            self._fs_hint_lbl.place_forget()
+        self._fs_hint_job = None
 
     def _build_ui(self):
         outer = tk.Frame(self, bg=_C["bg"], padx=14, pady=12)
@@ -1072,10 +1135,16 @@ class DskyWindow(tk.Toplevel):
             return
         self.update_idletasks()
         dh = self._data_frame.winfo_height()
+        dw = self._data_frame.winfo_width()
         wh = self._world_panel.winfo_height()
-        # 4 data rows share height minus label row (≈15px) and 3 separators (≈9px each)
+        # height-based size: 4 rows share height minus labels/separators
         row_h = max(1, (dh - 40) // 4)
-        data_size = max(10, int(row_h * 0.62))
+        h_size = max(10, int(row_h * 0.62))
+        # width-based cap: clock "HH:MM:SS" is 8 chars; DS-Digital bold ≈ 0.58× per pt
+        # subtract ~90px for the name/dot columns and inner padding
+        avail_w = max(1, dw - 90)
+        w_size = max(10, int(avail_w / (8 * 0.58)))
+        data_size = min(h_size, w_size)
         world_size = max(10, int((wh - 30) * 0.55))
         df = (self._DISP_FONT, data_size, "bold")
         self._clock_lbl.config(font=df)
@@ -1100,6 +1169,45 @@ class DskyWindow(tk.Toplevel):
         wv = self._osc_in.world_value()
         self._world_lbl.config(text=f"{wv:02d}" if wv is not None else "--")
         self.after(self.POLL_MS, self._update)
+
+
+# ---------------------------------------------------------------------------
+# Windows startup registry helpers
+# ---------------------------------------------------------------------------
+
+_STARTUP_REG_KEY = r"Software\Microsoft\Windows\CurrentVersion\Run"
+_STARTUP_REG_NAME = "MIDI Joy"
+
+
+def _get_startup_enabled() -> bool:
+    try:
+        import winreg
+        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, _STARTUP_REG_KEY)
+        winreg.QueryValueEx(key, _STARTUP_REG_NAME)
+        winreg.CloseKey(key)
+        return True
+    except Exception:
+        return False
+
+
+def _set_startup_enabled(enabled: bool) -> bool:
+    try:
+        import winreg
+        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, _STARTUP_REG_KEY,
+                             0, winreg.KEY_SET_VALUE)
+        if enabled:
+            exe = sys.executable if getattr(sys, "frozen", False) else os.path.abspath(sys.argv[0])
+            winreg.SetValueEx(key, _STARTUP_REG_NAME, 0, winreg.REG_SZ, f'"{exe}"')
+        else:
+            try:
+                winreg.DeleteValue(key, _STARTUP_REG_NAME)
+            except FileNotFoundError:
+                pass
+        winreg.CloseKey(key)
+        return True
+    except Exception as e:
+        messagebox.showerror("Startup Error", str(e))
+        return False
 
 
 class MapperApp(tk.Tk):
@@ -1139,6 +1247,7 @@ class MapperApp(tk.Tk):
         self._engine._osc_in_ref = self._osc_in
         self._dsky_win: Optional[DskyWindow] = None
         self._pl_win = None
+        self._startup_btn: Optional[tk.Label] = None
 
         # DSKY display state
         self._ind: dict = {}           # key → tk.Label (indicator lights)
@@ -1472,6 +1581,11 @@ class MapperApp(tk.Tk):
                               bg="#003300", fg="white")
         mk("RSET", 2, 6, rowspan=2, ipy=22, cmd=self._new_config)
 
+        # Row 3 — boot on startup toggle (cols 1–5; col 0 = PORT, col 6 = RSET)
+        boot_bg = "#001a00" if _get_startup_enabled() else "#000000"
+        self._startup_btn = mk("BOOT ON STARTUP", 3, 1, colspan=5, ipy=4,
+                               cmd=self._toggle_startup, bg=boot_bg, fg=_C["fg"])
+
     def _toggle_ap(self):
         if self._ap_open:
             self._ap_content.pack_forget()
@@ -1496,6 +1610,11 @@ class MapperApp(tk.Tk):
         new_val = not self._ap_enabled_var.get()
         self._ap_enabled_var.set(new_val)
         self._push_autopilot()
+
+    def _toggle_startup(self):
+        enabled = not _get_startup_enabled()
+        if _set_startup_enabled(enabled) and self._startup_btn:
+            self._startup_btn.config(bg="#001a00" if enabled else "#000000")
 
     def _toggle_log(self):
         if self._log_open:
