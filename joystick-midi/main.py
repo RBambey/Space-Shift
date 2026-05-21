@@ -286,6 +286,8 @@ class MidiEngine:
                 if not m.enabled:
                     continue
                 if m.source_type == "axis":
+                    if m.source_index >= js.get_numaxes():
+                        continue
                     real_raw = js.get_axis(m.source_index)
                     prev_real = self._last_axis.get(m.source_index)
 
@@ -329,14 +331,19 @@ class MidiEngine:
                         val = max(m.range_min, min(m.range_max, val))
                         if m.snap_floor > 0 and val - m.range_min <= m.snap_floor:
                             val = m.range_min
-                        if m.out_type == "cc":
-                            self._send([0xB0 | (m.channel - 1), m.number, val])
-                            self._send_osc(m.osc_address or f"/cc/{m.number}", val / 127.0)
-                        else:
-                            self._send([0x90 | (m.channel - 1), m.number, val])
-                            self._send_osc(m.osc_address or f"/note/{m.number}", val / 127.0)
+                        _axis_key = (m.source_index, m.out_type, m.number, m.channel)
+                        if self._last_axis.get(_axis_key) != val:
+                            self._last_axis[_axis_key] = val
+                            if m.out_type == "cc":
+                                self._send([0xB0 | (m.channel - 1), m.number, val])
+                                self._send_osc(m.osc_address or f"/cc/{m.number}", val / 127.0)
+                            else:
+                                self._send([0x90 | (m.channel - 1), m.number, val])
+                                self._send_osc(m.osc_address or f"/note/{m.number}", val / 127.0)
 
                 elif m.source_type == "button":
+                    if m.source_index >= js.get_numbuttons():
+                        continue
                     pressed = js.get_button(m.source_index)
                     prev = self._button_state.get(m.source_index, False)
                     if pressed != prev:
@@ -429,8 +436,6 @@ class MidiEngine:
         if self._osc_client is not None:
             try:
                 self._osc_client.send_message(address, value)
-                ts = time.strftime("%H:%M:%S")
-                self.activity_queue.put(f"{ts}  OSC {address}  {value:.3f}")
             except Exception:
                 pass
 
@@ -1224,8 +1229,8 @@ class MapperApp(tk.Tk):
             except Exception:
                 pass
         self.resizable(True, True)
-        self.minsize(560, 500)
-        self.geometry("700x760")
+        self.minsize(600, 600)
+        self.geometry("750x900")
 
         pygame.init()
         pygame.joystick.init()
@@ -1291,8 +1296,15 @@ class MapperApp(tk.Tk):
     def _build_ui(self):
         self._setup_styles()
 
+        # Pack keyboard buttons FIRST at bottom (side="bottom") so they stay visible
+        self._build_dsky_keyboard()
+
+        # ── Content frame: everything else packs above buttons ─────────────────
+        content_frame = tk.Frame(self, bg=_C["bg"])
+        content_frame.pack(fill="both", expand=True, side="top")
+
         # ── Top section: displays (full width) ───────────────────────────────
-        right_frame = tk.Frame(self, bg=_C["bg"])
+        right_frame = tk.Frame(content_frame, bg=_C["bg"])
         right_frame.pack(fill="x", padx=8, pady=(8, 4))
 
         # Prog row: indicator lights (left) + PROG version (right)
@@ -1390,10 +1402,10 @@ class MapperApp(tk.Tk):
         self._btn_dots_frame.pack(fill="x")
 
         # ── Autopilot (collapsible) ───────────────────────────────────────────
-        self._build_autopilot_panel()
+        self._build_autopilot_panel(content_frame)
 
         # ── Mappings list ─────────────────────────────────────────────────────
-        map_outer = tk.Frame(self, bg=_C["bg"])
+        map_outer = tk.Frame(content_frame, bg=_C["bg"])
         map_outer.pack(fill="both", expand=True, padx=8, pady=4)
 
         map_header = tk.Frame(map_outer, bg=_C["bg"])
@@ -1419,12 +1431,13 @@ class MapperApp(tk.Tk):
         self._listbox.bind("<Double-Button-1>", lambda _: self._edit_mapping())
 
         # ── MIDI Activity log (collapsible) ───────────────────────────────────
-        self._build_activity_log()
+        self._build_activity_log(content_frame)
 
-        # ── DSKY keyboard ─────────────────────────────────────────────────────
-        self._build_dsky_keyboard()
-
-    def _build_autopilot_panel(self):
+    def _build_autopilot_panel(self, parent=None):
+        if parent is None:
+            parent = self
+        outer = tk.Frame(parent, bg=_C["bg"])
+        outer.pack(fill="x", padx=8, pady=(0, 2))
         outer = tk.Frame(self, bg=_C["bg"])
         outer.pack(fill="x", padx=8, pady=(0, 2))
 
@@ -1489,8 +1502,10 @@ class MapperApp(tk.Tk):
                  ).grid(row=0, column=4, padx=2)
         self._ap_speed_lbl.grid(row=0, column=5, sticky="w")
 
-    def _build_activity_log(self):
-        outer = tk.Frame(self, bg=_C["bg"])
+    def _build_activity_log(self, parent=None):
+        if parent is None:
+            parent = self
+        outer = tk.Frame(parent, bg=_C["bg"])
         outer.pack(fill="x", padx=8, pady=(0, 2))
 
         header = tk.Frame(outer, bg=_C["bg"])
@@ -1524,13 +1539,12 @@ class MapperApp(tk.Tk):
 
     def _build_dsky_keyboard(self):
         kf = tk.Frame(self, bg=_C["bg"], pady=4)
-        kf.pack(fill="x", padx=8, pady=(4, 8))
+        kf.pack(side="bottom", fill="x", padx=8, pady=(4, 8))
         for col in range(7):
             kf.columnconfigure(col, weight=1)
 
         def mk(text, row, col, rowspan=1, colspan=1, cmd=None, ipy=8,
                bg="#000000", fg="white"):
-            # tk.Label inside a border Frame — Labels always respect bg on macOS
             border = tk.Frame(kf, bg="#777777")
             border.grid(row=row, column=col, rowspan=rowspan, columnspan=colspan,
                         sticky="nsew", padx=3, pady=3)
@@ -1549,41 +1563,32 @@ class MapperApp(tk.Tk):
                 lbl.bind("<ButtonRelease-1>", on_release)
             return lbl
 
-        # Tall side buttons (left)
-        mk("CTRL", 0, 0, rowspan=2, ipy=22,
-           cmd=lambda: self._ctrl_cb.focus_set())
-        mk("PORT", 2, 0, rowspan=2, ipy=22,
-           cmd=lambda: self._midi_cb.focus_set())
-
-        # Center row 0
+        # Row 0: Essential controls + START (always visible)
+        mk("CTRL", 0, 0, cmd=lambda: self._ctrl_cb.focus_set())
         mk("ADD",  0, 1, cmd=self._add_mapping)
         mk("SAVE", 0, 2, cmd=self._save_config)
         mk("LOAD", 0, 3, cmd=self._load_config)
         mk("CLR",  0, 4, cmd=self._clear_log)
         mk("NEW",  0, 5, cmd=self._new_config)
+        self._start_btn = mk("START", 0, 6, cmd=self._toggle_running,
+                             bg="#003300", fg="white")
 
-        # Center row 1 — AGC + PLAYLIST
-        mk("AGC", 1, 1, colspan=3, ipy=4,
+        # Row 1: PORT + Mapping edit controls + AGC + PLAYLIST
+        mk("PORT", 1, 0, cmd=lambda: self._midi_cb.focus_set())
+        mk("EDIT", 1, 1, cmd=self._edit_mapping)
+        mk("DEL",  1, 2, cmd=self._delete_mapping)
+        mk("PAUS", 1, 3, cmd=self._toggle_mapping_enabled)
+        mk("AUTO", 1, 4, cmd=self._toggle_autopilot)
+        mk("AGC", 1, 5, colspan=1, ipy=4,
            cmd=self._open_agc_window, bg="#001a00", fg=_C["fg"])
-        mk("PLAYLIST", 1, 4, colspan=2, ipy=4,
+        mk("RSET", 1, 6, cmd=self._new_config)
+
+        # Row 2: PLAYLIST + OSC + BOOT ON STARTUP
+        mk("PLAYLIST", 2, 1, colspan=2, ipy=4,
            cmd=self._open_playlist_window, bg="#001a00", fg=_C["fg"])
-
-        # Center row 2
-        mk("EDIT", 2, 1, cmd=self._edit_mapping)
-        mk("DEL",  2, 2, cmd=self._delete_mapping)
-        mk("PAUS", 2, 3, cmd=self._toggle_mapping_enabled)
-        mk("AUTO", 2, 4, cmd=self._toggle_autopilot)
-        mk("OSC",  2, 5, cmd=self._open_osc_dialog)
-
-        # Tall side buttons (right)
-        self._start_btn = mk("START", 0, 6, rowspan=2, ipy=22,
-                              cmd=self._toggle_running,
-                              bg="#003300", fg="white")
-        mk("RSET", 2, 6, rowspan=2, ipy=22, cmd=self._new_config)
-
-        # Row 3 — boot on startup toggle (cols 1–5; col 0 = PORT, col 6 = RSET)
+        mk("OSC",  2, 3, cmd=self._open_osc_dialog)
         boot_bg = "#001a00" if _get_startup_enabled() else "#000000"
-        self._startup_btn = mk("BOOT ON STARTUP", 3, 1, colspan=5, ipy=4,
+        self._startup_btn = mk("BOOT ON STARTUP", 2, 4, colspan=3, ipy=4,
                                cmd=self._toggle_startup, bg=boot_bg, fg=_C["fg"])
 
     def _toggle_ap(self):
@@ -1896,16 +1901,19 @@ class MapperApp(tk.Tk):
 
         self._update_indicators()
 
-        # Drain MIDI activity queue and append to log
+        # Drain MIDI activity queue and append to log (cap per tick to avoid blocking)
+        _new_entries = 0
         try:
-            while True:
+            while _new_entries < 50:
                 entry = self._engine.activity_queue.get_nowait()
                 self._log_listbox.insert(tk.END, "  " + entry)
                 if self._log_listbox.size() > MAX_LOG_ENTRIES:
                     self._log_listbox.delete(0)
-                self._log_listbox.see(tk.END)
+                _new_entries += 1
         except queue.Empty:
             pass
+        if _new_entries:
+            self._log_listbox.see(tk.END)
 
         self.after(POLL_INTERVAL_MS, self._poll_joystick)
 
