@@ -112,6 +112,7 @@ class MappingEntry:
     name: str = ""
     osc_address: str = ""     # custom OSC address; blank = auto (/cc/N or /note/N)
     enabled: bool = True      # False = mapping is paused
+    controller_index: int = 0  # pygame joystick index this mapping reads from
 
     def label(self):
         pause = "⏸ " if not self.enabled else "  "
@@ -135,7 +136,8 @@ class MappingEntry:
                 flags.append(f"sf{self.snap_floor}")
         flag_str = f"  [{', '.join(flags)}]" if flags else ""
         name_col = f"{self.name:<14}" if self.name else " " * 14
-        return f"{pause}{name_col} {self.source:<10} →  {target}{flag_str}"
+        src_col = f"C{self.controller_index}:{self.source:<8}"
+        return f"{pause}{name_col} {src_col} →  {target}{flag_str}"
 
 
 @dataclass
@@ -182,7 +184,7 @@ class MidiEngine:
         self._running = False
         self._thread: Optional[threading.Thread] = None
         self._midi_out = rtmidi.MidiOut()
-        self._joystick: Optional[pygame.joystick.JoystickType] = None
+        self._joysticks: list = []   # all active hardware joysticks, indexed by controller_index
         self._last_axis: dict = {}
         self._button_state: dict = {}
         self.activity_queue: queue.Queue = queue.Queue()
@@ -190,7 +192,7 @@ class MidiEngine:
         self._ap_values: dict = {}
         self._last_real_input: float = time.time()
         self._ap_active: bool = False
-        self._axis_cal: dict = {}  # {axis_index: {"offset": float, "enabled": bool}}
+        self._axis_cal: dict = {}  # {(ctrl_idx, axis_idx): {"offset": float, "enabled": bool}}
         self._osc_config = OscConfig()
         self._osc_client = None
         self._pl_client = None  # dedicated client for playlist; works even when OSC output is off
@@ -209,9 +211,9 @@ class MidiEngine:
             self._midi_out.close_port()
         self._midi_out.open_port(index)
 
-    def set_joystick(self, joystick: Optional[pygame.joystick.JoystickType]):
+    def set_joysticks(self, joysticks: list):
         with self._lock:
-            self._joystick = joystick
+            self._joysticks = list(joysticks)
             self._last_axis.clear()
             self._button_state.clear()
 
@@ -266,17 +268,13 @@ class MidiEngine:
             # pygame.event.pump() must run on the main thread — SDL event processing
             # is not thread-safe. The main thread's _poll_joystick() handles it.
             with self._lock:
-                js = self._joystick
+                joysticks = list(self._joysticks)
                 mappings = list(self._mappings)
                 ap = self._ap_config
             pl = self._playlist
             if (pl.enabled and pl.auto_advance and pl.size > 0 and
                     time.time() - self._pl_last_advance >= pl.auto_advance_seconds):
                 self.playlist_advance()
-
-            if js is None:
-                time.sleep(DT)
-                continue
 
             ap_on = ap.enabled and (time.time() - self._last_real_input) > ap.inactivity_seconds
             with self._lock:
@@ -285,33 +283,38 @@ class MidiEngine:
             for m in mappings:
                 if not m.enabled:
                     continue
+                # Look up the joystick for this specific mapping
+                js = joysticks[m.controller_index] if m.controller_index < len(joysticks) else None
+                if js is None:
+                    continue
                 if m.source_type == "axis":
                     if m.source_index >= js.get_numaxes():
                         continue
+                    _ax_real_key = (m.controller_index, m.source_index)
                     real_raw = js.get_axis(m.source_index)
-                    prev_real = self._last_axis.get(m.source_index)
+                    prev_real = self._last_axis.get(_ax_real_key)
 
                     # Detect real joystick movement to reset inactivity clock
                     if prev_real is None or abs(real_raw - prev_real) > 0.005:
                         self._last_real_input = time.time()
                         self._pl_last_advance = time.time()
-                        self._ap_values.pop(m.source_index, None)
+                        self._ap_values.pop(_ax_real_key, None)
 
                     if ap_on and m.source_index in ap.axes:
                         # Ornstein-Uhlenbeck update: smooth mean-reverting random walk
-                        x = self._ap_values.get(m.source_index, 0.0)
+                        x = self._ap_values.get(_ax_real_key, 0.0)
                         theta = 0.2 + ap.speed * 3.8
                         sigma = ap.drift * 0.6
                         x += -theta * x * DT + sigma * math.sqrt(DT) * random.gauss(0, 1)
                         x = max(-1.0, min(1.0, x))
-                        self._ap_values[m.source_index] = x
+                        self._ap_values[_ax_real_key] = x
                         raw = x
                     else:
                         raw = real_raw
-                        self._last_axis[m.source_index] = real_raw
+                        self._last_axis[_ax_real_key] = real_raw
 
                     # Apply center calibration offset
-                    cal = self._axis_cal.get(m.source_index, {})
+                    cal = self._axis_cal.get((m.controller_index, m.source_index), {})
                     if cal.get("enabled"):
                         raw = max(-1.0, min(1.0, raw - cal.get("offset", 0.0)))
 
@@ -331,7 +334,7 @@ class MidiEngine:
                         val = max(m.range_min, min(m.range_max, val))
                         if m.snap_floor > 0 and val - m.range_min <= m.snap_floor:
                             val = m.range_min
-                        _axis_key = (m.source_index, m.out_type, m.number, m.channel)
+                        _axis_key = (m.controller_index, m.source_index, m.out_type, m.number, m.channel)
                         if self._last_axis.get(_axis_key) != val:
                             self._last_axis[_axis_key] = val
                             if m.out_type == "cc":
@@ -344,10 +347,11 @@ class MidiEngine:
                 elif m.source_type == "button":
                     if m.source_index >= js.get_numbuttons():
                         continue
+                    _btn_key = (m.controller_index, m.source_index)
                     pressed = js.get_button(m.source_index)
-                    prev = self._button_state.get(m.source_index, False)
+                    prev = self._button_state.get(_btn_key, False)
                     if pressed != prev:
-                        self._button_state[m.source_index] = pressed
+                        self._button_state[_btn_key] = pressed
                         self._pl_last_advance = time.time()
                         if m.out_type == "playlist_next":
                             if pressed:
@@ -432,6 +436,10 @@ class MidiEngine:
     def _send_osc(self, address: str, value: float):
         if address not in self._last_osc:
             self._osc_order.append(address)
+        # Only log when the value actually changes (axes fire every 20ms otherwise)
+        if self._last_osc.get(address) != value:
+            ts = time.strftime("%H:%M:%S")
+            self.activity_queue.put(f"{ts}  OSC {address:<20s}  {value:.4f}")
         self._last_osc[address] = value
         if self._osc_client is not None:
             try:
@@ -523,7 +531,7 @@ class OscInputServer:
 # ---------------------------------------------------------------------------
 
 class MappingDialog(tk.Toplevel):
-    def __init__(self, parent, joystick: Optional[pygame.joystick.JoystickType],
+    def __init__(self, parent, joysticks: list, default_ctrl: int = 0,
                  entry: Optional[MappingEntry] = None):
         super().__init__(parent)
         self.configure(bg=_C["bg"])
@@ -532,15 +540,7 @@ class MappingDialog(tk.Toplevel):
         self.grab_set()
         self.result: Optional[MappingEntry] = None
 
-        self._sources = []
-        if joystick:
-            for i in range(joystick.get_numaxes()):
-                self._sources.append(("axis", i, f"Axis {i}"))
-            for i in range(joystick.get_numbuttons()):
-                self._sources.append(("button", i, f"Button {i}"))
-        if not self._sources:
-            self._sources = [("axis", 0, "Axis 0")]
-
+        self._joysticks = joysticks
         pad = {"padx": 8, "pady": 4}
 
         # Shorthand style dicts
@@ -555,56 +555,69 @@ class MappingDialog(tk.Toplevel):
         ckw = dict(bg=_C["bg"], fg=_C["fg"], selectcolor=_C["bg_disp"],
                    activebackground=_C["bg"], activeforeground=_C["fg"])
 
+        # Controller selector
+        tk.Label(self, text="Controller:", **lkw).grid(row=0, column=0, sticky="e", **pad)
+        ctrl_names = [f"[{i}] {js.get_name()}" for i, js in enumerate(joysticks)]
+        if not ctrl_names:
+            ctrl_names = ["(no controller)"]
+        self._ctrl_cb = ttk.Combobox(self, values=ctrl_names, state="readonly", width=24,
+                                     style="DSKY.TCombobox")
+        self._ctrl_cb.grid(row=0, column=1, columnspan=2, sticky="w", **pad)
+        self._ctrl_cb.current(min(default_ctrl, len(ctrl_names) - 1))
+        self._ctrl_cb.bind("<<ComboboxSelected>>", self._on_ctrl_change)
+
         # Name
-        tk.Label(self, text="Name:", **lkw).grid(row=0, column=0, sticky="e", **pad)
+        tk.Label(self, text="Name:", **lkw).grid(row=1, column=0, sticky="e", **pad)
         self._name_var = tk.StringVar()
         tk.Entry(self, textvariable=self._name_var, width=22, **ekw).grid(
-            row=0, column=1, columnspan=2, sticky="ew", **pad)
+            row=1, column=1, columnspan=2, sticky="ew", **pad)
 
-        # Source
-        tk.Label(self, text="Source:", **lkw).grid(row=1, column=0, sticky="e", **pad)
+        # Source (populated after controller is known)
+        tk.Label(self, text="Source:", **lkw).grid(row=2, column=0, sticky="e", **pad)
         self._src_var = tk.StringVar()
         self._src_cb = ttk.Combobox(self, textvariable=self._src_var,
-                                    values=[s[2] for s in self._sources],
+                                    values=[],
                                     state="readonly", width=14,
                                     style="DSKY.TCombobox")
-        self._src_cb.grid(row=1, column=1, columnspan=2, sticky="w", **pad)
+        self._src_cb.grid(row=2, column=1, columnspan=2, sticky="w", **pad)
         self._src_cb.bind("<<ComboboxSelected>>", self._on_src_change)
+        self._sources = []
+        self._populate_sources()   # fill dropdown only — no _on_type_change yet (widgets not built)
 
         # Output type
-        tk.Label(self, text="Output type:", **lkw).grid(row=2, column=0, sticky="e", **pad)
+        tk.Label(self, text="Output type:", **lkw).grid(row=3, column=0, sticky="e", **pad)
         self._out_var = tk.StringVar(value="cc")
         tk.Radiobutton(self, text="CC", variable=self._out_var,
                        value="cc", command=self._on_type_change, **ckw).grid(
-            row=2, column=1, sticky="w")
+            row=3, column=1, sticky="w")
         tk.Radiobutton(self, text="Note", variable=self._out_var,
                        value="note", command=self._on_type_change, **ckw).grid(
-            row=2, column=2, sticky="w")
+            row=3, column=2, sticky="w")
         tk.Radiobutton(self, text="OSC", variable=self._out_var,
                        value="osc", command=self._on_type_change, **ckw).grid(
-            row=2, column=3, sticky="w")
+            row=3, column=3, sticky="w")
         tk.Radiobutton(self, text="Playlist", variable=self._out_var,
                        value="playlist_next", command=self._on_type_change, **ckw).grid(
-            row=2, column=4, sticky="w")
+            row=3, column=4, sticky="w")
 
         # Number
         self._num_lbl = tk.Label(self, text="Number (0–127):", **lkw)
-        self._num_lbl.grid(row=3, column=0, sticky="e", **pad)
+        self._num_lbl.grid(row=4, column=0, sticky="e", **pad)
         self._num_var = tk.IntVar(value=1)
         self._num_sb = tk.Spinbox(self, from_=0, to=127, textvariable=self._num_var, width=6, **skw)
-        self._num_sb.grid(row=3, column=1, sticky="w", **pad)
+        self._num_sb.grid(row=4, column=1, sticky="w", **pad)
 
         # Channel
         self._ch_lbl = tk.Label(self, text="Channel (1–16):", **lkw)
-        self._ch_lbl.grid(row=4, column=0, sticky="e", **pad)
+        self._ch_lbl.grid(row=5, column=0, sticky="e", **pad)
         self._ch_var = tk.IntVar(value=1)
         self._ch_sb = tk.Spinbox(self, from_=1, to=16, textvariable=self._ch_var, width=6, **skw)
-        self._ch_sb.grid(row=4, column=1, sticky="w", **pad)
+        self._ch_sb.grid(row=5, column=1, sticky="w", **pad)
 
         # Axis options
         self._axis_frame = tk.LabelFrame(self, text="Axis options",
                                           bg=_C["bg"], fg=_C["fg_dim"])
-        self._axis_frame.grid(row=5, column=0, columnspan=3, sticky="ew", padx=8, pady=4)
+        self._axis_frame.grid(row=6, column=0, columnspan=3, sticky="ew", padx=8, pady=4)
 
         tk.Label(self._axis_frame, text="Output min:", **lkw).grid(row=0, column=0, sticky="e", **pad)
         self._rmin_var = tk.IntVar(value=0)
@@ -681,16 +694,16 @@ class MappingDialog(tk.Toplevel):
         # Velocity frame
         self._vel_frame = tk.LabelFrame(self, text="Note velocity",
                                          bg=_C["bg"], fg=_C["fg_dim"])
-        self._vel_frame.grid(row=6, column=0, columnspan=3, sticky="ew", **pad)
+        self._vel_frame.grid(row=7, column=0, columnspan=3, sticky="ew", **pad)
         tk.Label(self._vel_frame, text="Velocity:", **lkw).grid(row=0, column=0, **pad)
         self._vel_var = tk.IntVar(value=100)
         tk.Spinbox(self._vel_frame, from_=1, to=127, textvariable=self._vel_var,
                    width=6, **skw).grid(row=0, column=1, **pad)
 
         # OSC address override
-        tk.Label(self, text="OSC address:", **lkw).grid(row=7, column=0, sticky="e", **pad)
+        tk.Label(self, text="OSC address:", **lkw).grid(row=8, column=0, sticky="e", **pad)
         osc_row = tk.Frame(self, bg=_C["bg"])
-        osc_row.grid(row=7, column=1, columnspan=2, sticky="ew", **pad)
+        osc_row.grid(row=8, column=1, columnspan=2, sticky="ew", **pad)
         self._osc_addr_var = tk.StringVar()
         tk.Entry(osc_row, textvariable=self._osc_addr_var, width=18, **ekw).pack(side="left")
         tk.Label(osc_row, text="(blank = auto)", fg=_C["fg_dim"],
@@ -698,7 +711,7 @@ class MappingDialog(tk.Toplevel):
 
         # OK / Cancel
         btn_frame = tk.Frame(self, bg=_C["bg"])
-        btn_frame.grid(row=8, column=0, columnspan=3, pady=8)
+        btn_frame.grid(row=9, column=0, columnspan=3, pady=8)
         tk.Button(btn_frame, text="OK", width=8, command=self._ok, **bkw).pack(side="left", padx=4)
         tk.Button(btn_frame, text="Cancel", width=8, command=self.destroy, **bkw).pack(side="left", padx=4)
 
@@ -726,6 +739,33 @@ class MappingDialog(tk.Toplevel):
         self._update_sens_label()
         self._on_src_change()
         self._on_type_change()
+
+    def _populate_sources(self):
+        """Fill self._sources and Source combobox values for the current controller.
+        Safe to call before other widgets exist — no _on_type_change side-effects."""
+        idx = self._ctrl_cb.current()
+        js = self._joysticks[idx] if 0 <= idx < len(self._joysticks) else None
+        self._sources = []
+        if js:
+            for i in range(js.get_numaxes()):
+                self._sources.append(("axis", i, f"Axis {i}"))
+            for i in range(js.get_numbuttons()):
+                self._sources.append(("button", i, f"Button {i}"))
+        if not self._sources:
+            self._sources = [("axis", 0, "Axis 0")]
+        self._src_cb["values"] = [s[2] for s in self._sources]
+        if self._sources and not self._src_var.get():
+            self._src_cb.current(0)
+            self._src_var.set(self._sources[0][2])
+
+    def _rebuild_sources(self, *_):
+        """Repopulate sources for the selected controller and refresh UI visibility.
+        Only call after all dialog widgets have been created."""
+        self._populate_sources()
+        self._on_type_change()
+
+    def _on_ctrl_change(self, *_):
+        self._rebuild_sources()
 
     def _update_sens_label(self):
         self._sens_lbl.config(text=f"{self._sens_var.get():.2f}×")
@@ -792,6 +832,7 @@ class MappingDialog(tk.Toplevel):
             osc_max=round(self._osc_max_var.get(), 3),
             name=self._name_var.get().strip(),
             osc_address=self._osc_addr_var.get().strip(),
+            controller_index=self._ctrl_cb.current(),
         )
         self.destroy()
 
@@ -818,6 +859,62 @@ _INDICATORS = [
     ("CAL  ACT", "cal"),
     ("KEY  MODE", "key"),
 ]
+
+
+# ---------------------------------------------------------------------------
+# MIDI / OSC Activity pop-out window
+# ---------------------------------------------------------------------------
+
+class MidiActivityWindow(tk.Toplevel):
+    """Pop-out window showing combined MIDI + OSC activity log."""
+
+    def __init__(self, parent, initial_entries: list):
+        super().__init__(parent)
+        self.title("MIDI Joy — Activity")
+        self.geometry("560x380")
+        self.configure(bg=_C["bg"])
+        self.resizable(True, True)
+
+        # Header row
+        hdr = tk.Frame(self, bg=_C["bg"])
+        hdr.pack(fill="x", padx=8, pady=(8, 4))
+        tk.Label(hdr, text="MIDI + OSC ACTIVITY",
+                 bg=_C["bg"], fg=_C["fg_dim"],
+                 font=("Helvetica", 10, "bold")).pack(side="left")
+        tk.Button(hdr, text="CLEAR", command=self._clear,
+                  bg=_C["btn_bg"], fg=_C["fg"],
+                  activebackground="#2a2a2a", activeforeground=_C["fg"],
+                  relief="flat", font=("Helvetica", 9)).pack(side="right", padx=4)
+
+        # Log listbox
+        frame = tk.Frame(self, bg=_C["bg"])
+        frame.pack(fill="both", expand=True, padx=8, pady=(0, 8))
+        scroll = tk.Scrollbar(frame, orient="vertical",
+                              bg=_C["btn_bg"], troughcolor=_C["bg"],
+                              activebackground=_C["fg"])
+        self._lb = tk.Listbox(
+            frame, yscrollcommand=scroll.set,
+            font=("Courier", 10), activestyle="none",
+            bg=_C["bg_disp"], fg=_C["fg"],
+            selectbackground=_C["sel_bg"], selectforeground=_C["fg"],
+            bd=0, highlightthickness=0)
+        scroll.config(command=self._lb.yview)
+        self._lb.pack(side="left", fill="both", expand=True)
+        scroll.pack(side="right", fill="y")
+
+        # Populate with entries already in the shared buffer
+        self.append_entries(initial_entries)
+
+    def append_entries(self, entries: list):
+        for e in entries:
+            self._lb.insert(tk.END, "  " + e)
+            if self._lb.size() > MAX_LOG_ENTRIES:
+                self._lb.delete(0)
+        if entries:
+            self._lb.see(tk.END)
+
+    def _clear(self):
+        self._lb.delete(0, tk.END)
 
 
 # ---------------------------------------------------------------------------
@@ -1238,11 +1335,14 @@ class MapperApp(tk.Tk):
         self._engine = MidiEngine()
         self._mappings: List[MappingEntry] = []
         self._autopilot_config = AutopilotConfig()
-        self._joystick: Optional[pygame.joystick.JoystickType] = None
+        self._joystick: Optional[pygame.joystick.JoystickType] = None  # currently viewed controller
+        self._all_joysticks: list = []   # all initialized hardware joysticks
+        self._ctrl_idx: int = 0          # combobox index of the viewed controller
         self._kb_joystick = KeyboardJoystick()
         self._running = False
-        self._log_open = False
         self._ap_open = False
+        self._activity_buf: List[str] = []   # capped log buffer, shared with pop-out window
+        self._act_win = None                 # MidiActivityWindow instance
         self._ap_axis_vars: List[tk.BooleanVar] = []
         self._axis_cal: dict = {}
         self._axis_cal_vars: dict = {}
@@ -1430,9 +1530,6 @@ class MapperApp(tk.Tk):
         scrollbar.pack(side="right", fill="y")
         self._listbox.bind("<Double-Button-1>", lambda _: self._edit_mapping())
 
-        # ── MIDI Activity log (collapsible) ───────────────────────────────────
-        self._build_activity_log(content_frame)
-
     def _build_autopilot_panel(self, parent=None):
         if parent is None:
             parent = self
@@ -1502,41 +1599,6 @@ class MapperApp(tk.Tk):
                  ).grid(row=0, column=4, padx=2)
         self._ap_speed_lbl.grid(row=0, column=5, sticky="w")
 
-    def _build_activity_log(self, parent=None):
-        if parent is None:
-            parent = self
-        outer = tk.Frame(parent, bg=_C["bg"])
-        outer.pack(fill="x", padx=8, pady=(0, 2))
-
-        header = tk.Frame(outer, bg=_C["bg"])
-        header.pack(fill="x")
-        self._log_toggle_btn = tk.Button(
-            header, text="▸ MIDI ACTIVITY", anchor="w",
-            relief="flat", font=("Helvetica", 10, "bold"),
-            bg=_C["bg"], fg=_C["fg_dim"],
-            activebackground=_C["bg"], activeforeground=_C["fg"],
-            command=self._toggle_log)
-        self._log_toggle_btn.pack(side="left", fill="x", expand=True)
-        tk.Button(header, text="CLEAR", command=self._clear_log,
-                  bg=_C["btn_bg"], fg=_C["fg"],
-                  activebackground="#2a2a2a", activeforeground=_C["fg"],
-                  relief="flat", font=("Helvetica", 9)).pack(side="right", padx=4)
-
-        self._log_content = tk.Frame(outer, bg=_C["bg"])
-        log_scroll = tk.Scrollbar(self._log_content, orient="vertical",
-                                  bg=_C["btn_bg"], troughcolor=_C["bg"],
-                                  activebackground=_C["fg"])
-        self._log_listbox = tk.Listbox(
-            self._log_content, height=6,
-            yscrollcommand=log_scroll.set,
-            font=("Courier", 10), activestyle="none",
-            bg=_C["bg_disp"], fg=_C["fg"],
-            selectbackground=_C["sel_bg"], selectforeground=_C["fg"],
-            bd=0, highlightthickness=0)
-        log_scroll.config(command=self._log_listbox.yview)
-        self._log_listbox.pack(side="left", fill="both", expand=True)
-        log_scroll.pack(side="right", fill="y")
-
     def _build_dsky_keyboard(self):
         kf = tk.Frame(self, bg=_C["bg"], pady=4)
         kf.pack(side="bottom", fill="x", padx=8, pady=(4, 8))
@@ -1564,7 +1626,8 @@ class MapperApp(tk.Tk):
             return lbl
 
         # Row 0: Essential controls + START (always visible)
-        mk("CTRL", 0, 0, cmd=lambda: self._ctrl_cb.focus_set())
+        mk("MIDI", 0, 0, cmd=self._open_midi_activity_window,
+           bg="#001a00", fg=_C["fg"])
         mk("ADD",  0, 1, cmd=self._add_mapping)
         mk("SAVE", 0, 2, cmd=self._save_config)
         mk("LOAD", 0, 3, cmd=self._load_config)
@@ -1621,17 +1684,10 @@ class MapperApp(tk.Tk):
         if _set_startup_enabled(enabled) and self._startup_btn:
             self._startup_btn.config(bg="#001a00" if enabled else "#000000")
 
-    def _toggle_log(self):
-        if self._log_open:
-            self._log_content.pack_forget()
-            self._log_toggle_btn.config(text="▸ MIDI ACTIVITY")
-        else:
-            self._log_content.pack(fill="x")
-            self._log_toggle_btn.config(text="▾ MIDI ACTIVITY")
-        self._log_open = not self._log_open
-
     def _clear_log(self):
-        self._log_listbox.delete(0, tk.END)
+        self._activity_buf.clear()
+        if self._act_win and self._act_win.winfo_exists():
+            self._act_win._clear()
 
     def _on_osc_change(self):
         if not HAS_OSC and self._osc_enabled_var.get():
@@ -1691,9 +1747,17 @@ class MapperApp(tk.Tk):
         pygame.joystick.quit()
         pygame.joystick.init()
         count = pygame.joystick.get_count()
-        names = [pygame.joystick.Joystick(i).get_name() for i in range(count)]
+        self._all_joysticks = []
+        names = []
+        for i in range(count):
+            js = pygame.joystick.Joystick(i)
+            js.init()
+            self._all_joysticks.append(js)
+            names.append(f"[{i}] {js.get_name()}")
         names.append(KeyboardJoystick.NAME)
         self._ctrl_cb["values"] = names
+        # Push all hardware joysticks to the engine so all mappings can fire
+        self._engine.set_joysticks(self._all_joysticks)
         if names:
             self._ctrl_cb.current(0)
             self._on_ctrl_select()
@@ -1706,13 +1770,13 @@ class MapperApp(tk.Tk):
         idx = self._ctrl_cb.current()
         if idx < 0:
             return
-        hw_count = pygame.joystick.get_count()
+        self._ctrl_idx = idx
+        hw_count = len(self._all_joysticks)
         if idx >= hw_count:
             self._joystick = self._kb_joystick
         else:
-            self._joystick = pygame.joystick.Joystick(idx)
-            self._joystick.init()
-        self._engine.set_joystick(self._joystick)
+            self._joystick = self._all_joysticks[idx]
+        # Engine already holds all joysticks — only update live panel
         self._rebuild_live_panel()
 
     def _refresh_midi_ports(self):
@@ -1796,7 +1860,7 @@ class MapperApp(tk.Tk):
             self._r_set0.append(set0)
 
             # CAL toggle
-            cal_enabled = self._axis_cal.get(i, {}).get("enabled", False)
+            cal_enabled = self._axis_cal.get((self._ctrl_idx, i), {}).get("enabled", False)
             cal_var = tk.BooleanVar(value=cal_enabled)
             self._axis_cal_vars[i] = cal_var
             cal_chk = tk.Checkbutton(row, text="CAL", variable=cal_var,
@@ -1850,10 +1914,11 @@ class MapperApp(tk.Tk):
             self._rebuild_live_panel()
             return
 
-        # Map axis index → first matching mapping's display name
+        # Map axis index → first matching mapping's display name (current controller only)
         axis_names: dict = {}
         for m in self._mappings:
-            if m.source_type == "axis" and m.source_index not in axis_names:
+            if (m.source_type == "axis" and m.controller_index == self._ctrl_idx
+                    and m.source_index not in axis_names):
                 axis_names[m.source_index] = (m.name or m.source).strip()
 
         for i in range(n):
@@ -1901,19 +1966,19 @@ class MapperApp(tk.Tk):
 
         self._update_indicators()
 
-        # Drain MIDI activity queue and append to log (cap per tick to avoid blocking)
-        _new_entries = 0
+        # Drain MIDI/OSC activity queue into shared buffer and pop-out window
+        _new = []
         try:
-            while _new_entries < 50:
-                entry = self._engine.activity_queue.get_nowait()
-                self._log_listbox.insert(tk.END, "  " + entry)
-                if self._log_listbox.size() > MAX_LOG_ENTRIES:
-                    self._log_listbox.delete(0)
-                _new_entries += 1
+            while len(_new) < 50:
+                _new.append(self._engine.activity_queue.get_nowait())
         except queue.Empty:
             pass
-        if _new_entries:
-            self._log_listbox.see(tk.END)
+        if _new:
+            self._activity_buf.extend(_new)
+            if len(self._activity_buf) > MAX_LOG_ENTRIES:
+                del self._activity_buf[:-MAX_LOG_ENTRIES]
+            if self._act_win and self._act_win.winfo_exists():
+                self._act_win.append_entries(_new)
 
         self.after(POLL_INTERVAL_MS, self._poll_joystick)
 
@@ -1924,18 +1989,20 @@ class MapperApp(tk.Tk):
     def _set_axis_zero(self, axis_idx: int):
         if self._joystick is None:
             return
+        key = (self._ctrl_idx, axis_idx)
         offset = self._joystick.get_axis(axis_idx)
-        self._axis_cal.setdefault(axis_idx, {"offset": 0.0, "enabled": False})
-        self._axis_cal[axis_idx]["offset"] = offset
-        self._axis_cal[axis_idx]["enabled"] = True
+        self._axis_cal.setdefault(key, {"offset": 0.0, "enabled": False})
+        self._axis_cal[key]["offset"] = offset
+        self._axis_cal[key]["enabled"] = True
         if axis_idx in self._axis_cal_vars:
             self._axis_cal_vars[axis_idx].set(True)
         self._push_axis_cal()
 
     def _on_cal_toggle(self, axis_idx: int):
+        key = (self._ctrl_idx, axis_idx)
         enabled = self._axis_cal_vars[axis_idx].get()
-        self._axis_cal.setdefault(axis_idx, {"offset": 0.0, "enabled": False})
-        self._axis_cal[axis_idx]["enabled"] = enabled
+        self._axis_cal.setdefault(key, {"offset": 0.0, "enabled": False})
+        self._axis_cal[key]["enabled"] = enabled
         self._push_axis_cal()
 
     def _push_axis_cal(self):
@@ -1966,7 +2033,7 @@ class MapperApp(tk.Tk):
                 self._listbox.itemconfig(i, fg=_C["fg_dim"])
 
     def _add_mapping(self):
-        dlg = MappingDialog(self, self._joystick)
+        dlg = MappingDialog(self, self._all_joysticks, default_ctrl=self._ctrl_idx)
         self.wait_window(dlg)
         if dlg.result:
             self._mappings.append(dlg.result)
@@ -1980,7 +2047,9 @@ class MapperApp(tk.Tk):
             messagebox.showinfo("Edit", "Select a mapping to edit.", parent=self)
             return
         idx = sel[0]
-        dlg = MappingDialog(self, self._joystick, self._mappings[idx])
+        dlg = MappingDialog(self, self._all_joysticks,
+                            default_ctrl=self._mappings[idx].controller_index,
+                            entry=self._mappings[idx])
         self.wait_window(dlg)
         if dlg.result:
             self._mappings[idx] = dlg.result
@@ -2076,7 +2145,7 @@ class MapperApp(tk.Tk):
             self._read_config(DEFAULT_CONFIG)
 
     def _write_config(self, path: str):
-        axis_cal_json = {str(k): v for k, v in self._axis_cal.items()}
+        axis_cal_json = {f"{k[0]},{k[1]}": v for k, v in self._axis_cal.items()}
         try:
             osc_port = int(self._osc_port_var.get())
         except (ValueError, tk.TclError):
@@ -2103,12 +2172,22 @@ class MapperApp(tk.Tk):
             else:
                 mappings_data = data.get("mappings", [])
                 autopilot_data = data.get("autopilot", {})
-            self._mappings = [MappingEntry(**d) for d in mappings_data]
+            valid_me_keys = MappingEntry.__dataclass_fields__
+            self._mappings = [
+                MappingEntry(**{k: v for k, v in d.items() if k in valid_me_keys})
+                for d in mappings_data
+            ]
             valid_ap_keys = AutopilotConfig.__dataclass_fields__
             self._autopilot_config = AutopilotConfig(
                 **{k: v for k, v in autopilot_data.items() if k in valid_ap_keys})
             raw_cal = data.get("axis_cal", {}) if isinstance(data, dict) else {}
-            self._axis_cal = {int(k): v for k, v in raw_cal.items()}
+            self._axis_cal = {}
+            for s, v in raw_cal.items():
+                if "," in str(s):
+                    ci, ai = str(s).split(",", 1)
+                    self._axis_cal[(int(ci), int(ai))] = v
+                else:
+                    self._axis_cal[(0, int(s))] = v  # upgrade old single-ctrl format
             osc_data = data.get("osc", {}) if isinstance(data, dict) else {}
             valid_osc = OscConfig.__dataclass_fields__
             osc = OscConfig(**{k: v for k, v in osc_data.items() if k in valid_osc})
@@ -2161,6 +2240,16 @@ class MapperApp(tk.Tk):
             get_indicators=self._get_indicator_states,
             osc_in=self._osc_in,
         )
+
+    # -----------------------------------------------------------------------
+    # MIDI Activity window
+    # -----------------------------------------------------------------------
+
+    def _open_midi_activity_window(self):
+        if self._act_win and self._act_win.winfo_exists():
+            self._act_win.lift()
+            return
+        self._act_win = MidiActivityWindow(self, list(self._activity_buf))
 
     # -----------------------------------------------------------------------
     # Playlist window
