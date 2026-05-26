@@ -93,7 +93,7 @@
 		},
 		{
 			"DEFAULT" : 0.15,
-			"DESCRIPTION" : "Sun azimuth around the Moon (0–1 = full 360° rotation).",
+			"DESCRIPTION" : "Earth azimuth (0–1 = full 360° rotation).",
 			"MAX" : 1,
 			"MIN" : 0,
 			"NAME" : "sun_angle",
@@ -103,7 +103,7 @@
 		},
 		{
 			"DEFAULT" : 0.25,
-			"DESCRIPTION" : "Sun height above horizon — low values cast long dramatic shadows across craters.",
+			"DESCRIPTION" : "Earth height above horizon — low values cast long dramatic shadows across craters.",
 			"MAX" : 0.8,
 			"MIN" : 0.02,
 			"NAME" : "sun_elevation",
@@ -123,7 +123,7 @@
 		},
 		{
 			"DEFAULT" : 0.5,
-			"DESCRIPTION" : "How strongly bass pulses the ambient brightness and crater rim glow.",
+			"DESCRIPTION" : "How strongly bass pulses the earthshine glow and crater rim brightness.",
 			"MAX" : 1,
 			"MIN" : 0,
 			"NAME" : "bass_reactivity",

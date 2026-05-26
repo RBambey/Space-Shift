@@ -126,6 +126,36 @@ float heightMapTracing(vec3 ori, vec3 dir, out vec3 p) {
     return tmid;
 }
 
+// ---- Horizon mountain silhouette (angular space — never reachable) ----
+float moonMtnH(float az) {
+    float h = noise(vec2(az * 3.8,  0.55)) * 0.50
+            + noise(vec2(az * 8.1,  2.33)) * 0.28
+            + noise(vec2(az * 17.5, 5.71)) * 0.15
+            + noise(vec2(az * 36.2, 9.14)) * 0.07;
+    return max(h - 0.42, 0.0) * (1.0 / 0.58);
+}
+
+vec4 horizonMountains(vec3 rd, vec3 sunDir) {
+    float el = rd.y;
+    if (el > 0.14 || el < -0.02) return vec4(0.0);
+
+    float az = atan(rd.x, rd.z);
+    float mh = moonMtnH(az) * 0.10;
+    if (el > mh) return vec4(0.0);
+
+    float eps = 0.006;
+    float dh  = (moonMtnH(az + eps) - moonMtnH(az - eps)) * 0.10;
+    vec3  n   = normalize(vec3(-dh * cos(az), eps * 4.0, -dh * sin(az)));
+
+    float diff  = max(dot(n, sunDir), 0.0);
+    float elT   = clamp(el / max(mh, 0.001), 0.0, 1.0);
+    float shade = 0.12 + diff * 0.55 + smoothstep(0.0, 0.7, elT) * 0.10;
+
+    // Grey rock — cool earthshine tint in shadow, warm in sunlight
+    vec3 mtnCol = mix(vec3(0.08, 0.09, 0.11), vec3(shade * 0.82, shade * 0.84, shade * 0.88), shade);
+    return vec4(mtnCol, 1.0);
+}
+
 // ---- Star field (3 density layers) ----
 float starLayer(vec3 rd, float scale, vec2 seed) {
     vec2 uv2 = vec2(atan(rd.x, rd.z), asin(clamp(rd.y, -1.0, 1.0))) * scale / PI;
@@ -146,11 +176,56 @@ vec3 skyColor(vec3 rd, vec3 sunDir, vec3 sunCol) {
     col += starLayer(rd.yzx,  120.0, vec2(11.3, 17.7)) * vec3(1.00, 0.95, 0.85) * 0.8;
     col += starLayer(rd.zxy,  200.0, vec2(37.9,  5.1)) * vec3(0.80, 0.88, 1.00) * 0.5;
 
-    // Sun disc + corona glow
-    float sunDot  = dot(rd, sunDir);
-    float sunDisc = smoothstep(0.9997, 1.0, sunDot);
-    float sunGlow = pow(max(sunDot, 0.0), 384.0) * 0.4;
-    col += sunCol * sunDisc * 10.0 + sunCol * sunGlow;
+    // --- Earth (replaces sun disc) ---
+    float earthDot = dot(rd, sunDir);
+    float earthAngR = 0.070;   // ~4° angular radius
+
+    // Wide earthshine glow — pulses with bass
+    float eGlow = pow(max(earthDot, 0.0), 48.0)
+                * (1.0 + syn_BassLevel * bass_reactivity * 2.5) * 0.35;
+    col += vec3(0.20, 0.48, 0.90) * eGlow;
+
+    // Tangent frame for disc UV (guard against vertical sunDir)
+    vec3 eRight = abs(sunDir.y) < 0.999
+                  ? normalize(cross(sunDir, vec3(0.0, 1.0, 0.0)))
+                  : vec3(1.0, 0.0, 0.0);
+    vec3 eUp    = normalize(cross(eRight, sunDir));
+    vec3 rdPerp = rd - sunDir * earthDot;
+    vec2 euv    = vec2(dot(rdPerp, eRight), dot(rdPerp, eUp)) / earthAngR;
+    float r2    = dot(euv, euv);
+
+    if (r2 < 1.12) {
+        if (r2 >= 1.0) {
+            // Atmospheric rim
+            col += vec3(0.25, 0.55, 1.00) * exp(-10.0 * (sqrt(r2) - 1.0)) * 0.9;
+        } else {
+            // Earth surface — ocean / land / cloud layers
+            float land  = smoothstep(0.44, 0.56,
+                            noise(euv * 3.1 + 1.7) * 0.55
+                          + noise(euv * 7.3)        * 0.30
+                          + noise(euv * 14.7)       * 0.15);
+            float cloud = smoothstep(0.52, 0.62,
+                            noise(euv * 4.8 + vec2(0.3, 0.8)) * 0.50
+                          + noise(euv * 9.5)                   * 0.35
+                          + noise(euv * 21.0)                  * 0.15);
+            float limb  = 1.0 - sqrt(max(1.0 - r2, 0.0)) * 0.35;
+
+            vec3 ocean  = vec3(0.04, 0.16, 0.42);
+            vec3 terra  = mix(vec3(0.06, 0.24, 0.06),
+                              vec3(0.30, 0.22, 0.11),
+                              noise(euv * 5.7 + 0.9));
+            vec3 earthS = mix(ocean, terra, land);
+            earthS      = mix(earthS, vec3(0.88, 0.92, 1.00), cloud);
+            earthS     *= (1.0 - limb * 0.35);
+
+            float pulse = 1.0 + syn_BassLevel * bass_reactivity * 1.5;
+            col = earthS * pulse;
+        }
+    }
+
+    // Horizon mountains (angular space — fixed, never reachable)
+    vec4 mtn = horizonMountains(rd, sunDir);
+    if (mtn.a > 0.5) return mtn.rgb;
 
     return col;
 }
@@ -194,13 +269,20 @@ vec4 renderMain() {
     float epsNrm = max(dot(p - ro, p - ro) * (0.08 / RENDERSIZE.x), 0.02);
     vec3  n      = getNormal(p, epsNrm);
 
-    // --- Surface albedo (grey regolith with subtle patchwork) ---
-    float albedo = 0.42
-                 + noise(p.xz * 0.08) * 0.06
-                 + noise(p.xz * 0.90) * 0.02;
-    vec3 tint    = mix(vec3(1.00, 0.97, 0.93),   // 0 = warm dusty tan
-                        vec3(0.93, 0.96, 1.02),   // 1 = cool earthshine blue
-                        moon_tint);
+    // --- Surface albedo — dark mare (0.15) to bright highland (0.72) ---
+    float alb_mare  = noise(p.xz * 0.012);        // large highland/mare patches
+    float alb_mid   = noise(p.xz * 0.08)  * 0.08;
+    float alb_fine  = noise(p.xz * 0.90)  * 0.03;
+    float alb_micro = noise(p.xz * 4.0)   * 0.02;
+    float albedo    = clamp(0.22 + alb_mare * 0.44 + alb_mid + alb_fine + alb_micro, 0.15, 0.72);
+
+    // Subtle warm/cool patch variation layered on top of moon_tint knob
+    float warmPatch = noise(p.xz * 0.035);
+    vec3 tint = mix(vec3(1.00, 0.97, 0.93),   // 0 = warm dusty tan
+                     vec3(0.93, 0.96, 1.02),   // 1 = cool earthshine blue
+                     moon_tint);
+    tint = mix(tint, tint + vec3(0.05, 0.03, -0.01) * warmPatch, 0.35);
+
     vec3 surface = vec3(albedo) * tint;
 
     // --- Lighting — no atmosphere, harsh directional sun ---
