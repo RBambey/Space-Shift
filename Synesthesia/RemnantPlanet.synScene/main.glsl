@@ -19,6 +19,11 @@ float absScalem1           = abs(SCALE - 1.0);
 float AbsScaleRaisedTo1mIters = pow(abs(SCALE), float(1 - 10));
 vec4  mboxScale            = vec4(SCALE, SCALE, SCALE, abs(SCALE)) / minRad2;
 
+// Tile the world into [-2, 2] cells with period 4 — infinite Mandelbox copies
+vec3 tile(vec3 pos) {
+    return mod(pos + 2.0, 4.0) - 2.0;
+}
+
 // Surface orbit-trap colours — modified per-pixel inside Colour()
 vec3 surfaceCol1 = vec3(0.80, 0.00, 0.00);  // deep red base
 vec3 surfaceCol2 = vec3(0.40, 0.40, 0.50);  // grey-blue mid
@@ -51,7 +56,8 @@ float procNoise(vec3 x) {
 // stored in p.w (DE standard technique for IFS fractals).
 
 float Map(vec3 pos) {
-    vec4 p = vec4(pos, 1.0), p0 = p;
+    vec3  tp = tile(pos);              // fold into nearest tile cell [-2, 2]
+    vec4  p  = vec4(tp, 1.0), p0 = p;
     for (int i = 0; i < 9; i++) {
         p.xyz  = clamp(p.xyz, -1.0, 1.0) * 2.0 - p.xyz;
         float r2 = dot(p.xyz, p.xyz);
@@ -66,7 +72,8 @@ float Map(vec3 pos) {
 // Pulsing neon seam driven by TIME and colour_speed control.
 
 vec3 Colour(vec3 pos) {
-    vec3 p = pos, p0 = p;
+    vec3  tp = tile(pos);              // fold into nearest tile cell [-2, 2]
+    vec3  p  = tp, p0 = tp;
     float trap = 1.0;
     for (int i = 0; i < 6; i++) {
         p.xyz  = clamp(p.xyz, -1.0, 1.0) * 2.0 - p.xyz;
@@ -139,7 +146,7 @@ vec2 Scene(vec3 rO, vec3 rD, float jitter) {
     bool  hit  = false;
     vec2  dist;
     for (int j = 0; j < 100; j++) {
-        if (t > 12.0) break;
+        if (t > 20.0) break;
         float h = Map(rO + t * rD);
         if (h < 0.0005) { dist = vec2(oldT, t);  hit = true;  break; }
         glow += clamp(0.05 - h, 0.0, 0.4);
@@ -157,7 +164,7 @@ vec3 LightSource(vec3 toSpot, vec3 rd, float hitDist) {
     if (length(toSpot) >= hitDist) return vec3(0.0);
     float a = max(dot(normalize(toSpot), rd), 0.0);
     float g = pow(a, 500.0) + pow(a, 5000.0) * 0.2;
-    return vec3(0.6) * g;
+    return vec3(1.0, 0.18, 0.04) * g;   // hot red-orange ember
 }
 
 // ---- Post effects ------------------------------------------
@@ -176,7 +183,7 @@ vec3 PostEffects(vec3 rgb, vec2 xy) {
 
 // ---- Shading at surface point p ----------------------------
 
-vec3 renderColour(vec3 p, vec2 ret, vec3 rd, vec3 spotLight) {
+vec3 renderColour(vec3 p, vec2 ret, vec3 rd, vec3 spotLight, vec3 cw) {
     vec3  nor     = GetNormal(p, ret.x);
     vec3  spot    = spotLight - p;
     float atten   = length(spot);
@@ -187,12 +194,18 @@ vec3 renderColour(vec3 p, vec2 ret, vec3 rd, vec3 spotLight) {
     float bri     = max(dot(spot,    nor), 0.0) / pow(atten, 1.5) * 0.25;
     float briSun  = max(dot(SUN_DIR, nor), 0.0) * 0.20;
 
-    vec3  col = Colour(p);
-    col = col * bri * shaSpot + col * briSun * shaSun;
+    // Cache surface colour — Colour() has a global side effect so call it once
+    vec3  surf = Colour(p);
+    vec3  col  = surf * bri * shaSpot + surf * briSun * shaSun;
 
     vec3 ref = reflect(rd, nor);
     col += pow(max(dot(spot,    ref), 0.0), 10.0) * 2.0 * shaSpot * bri;
     col += pow(max(dot(SUN_DIR, ref), 0.0), 10.0) * 2.0 * shaSun  * briSun;
+
+    // Camera headlight — directional from camera forward, no falloff, no shadow.
+    // Ensures surfaces directly in view are never completely dark.
+    float briHead = max(dot(cw, nor), 0.0) * 0.18;
+    col += surf * briHead;
 
     // Bass pulse
     col *= 1.0 + syn_BassLevel * bass_reactivity * 0.5;
@@ -210,11 +223,11 @@ vec4 renderMain() {
     vec3 cw  = vec3(cam_fx, cam_fy, cam_fz);   // forward
     vec3 rd  = normalize(sc.x * cu + sc.y * cv + 1.3 * cw);
 
-    // Spotlight orbits a point just ahead of the camera
-    vec3 spotLight = ro + cw * 0.5
-                   + vec3(sin(TIME * 18.40),
-                          cos(TIME * 17.98),
-                          sin(TIME * 22.53)) * 0.20;
+    // Spotlight drifts slowly ahead of the camera on a wide lazy orbit
+    vec3 spotLight = ro + cw * 1.5
+                   + vec3(sin(TIME * 0.73),
+                          cos(TIME * 0.51),
+                          sin(TIME * 0.89)) * 1.20;
 
     // Sky: dark void with subtle procedural variation
     vec3 sky = vec3(0.03, 0.04, 0.05) * GetSky(rd);
@@ -226,20 +239,20 @@ vec4 renderMain() {
     vec3 col = vec3(0.0);
     if (ret.x < 900.0) {
         vec3 p = ro + ret.x * rd;
-        col    = renderColour(p, ret, rd, spotLight);
+        col    = renderColour(p, ret, rd, spotLight, cw);
 
         // AA: shade 4 nearby surface positions using camera axes, average all 5.
         // Smooths fractal edges without extra ray marches.
         vec2 a = ret.x * (1.0 / RENDERSIZE.xy) * 2.0;
-        col   += renderColour(p + cu * a.x, ret, rd, spotLight);
-        col   += renderColour(p - cu * a.x, ret, rd, spotLight);
-        col   += renderColour(p + cv * a.y, ret, rd, spotLight);
-        col   += renderColour(p - cv * a.y, ret, rd, spotLight);
+        col   += renderColour(p + cu * a.x, ret, rd, spotLight, cw);
+        col   += renderColour(p - cu * a.x, ret, rd, spotLight, cw);
+        col   += renderColour(p + cv * a.y, ret, rd, spotLight, cw);
+        col   += renderColour(p - cv * a.y, ret, rd, spotLight, cw);
         col   *= 0.2;
     }
 
     // Fog into void + glow halo from fractal
-    col  = mix(sky, col, min(exp(-ret.x * 0.3), 1.0));
+    col  = mix(sky, col, min(exp(-ret.x * 0.15), 1.0));
     col += pow(abs(ret.y), 2.5) * vec3(0.01, 0.00, 0.03);
 
     // Spotlight lens flare
