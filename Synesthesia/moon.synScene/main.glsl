@@ -34,9 +34,34 @@ float craterProfile(float r) {
     return (rim + floor_) * fade;
 }
 
+// ---- Giant crater profile — broad rim, shallow flat floor (impact basin style) ----
+float giantCraterProfile(float r) {
+    if (r > 2.0) return 0.0;
+    float rim    = exp(-pow((r - 1.0) * 2.2, 2.0)) * 0.35;
+    float floor_ = -exp(-r * r * 0.5) * 0.65;
+    float fade   = 1.0 - smoothstep(1.8, 2.2, r);
+    return (rim + floor_) * fade;
+}
+
 // ---- Moon surface height at world XZ ----
 float moonHeight(vec2 xz) {
     float h = 0.0;
+
+    // Giant craters (radius 60–130 units, grid 400) — rare landmark basins
+    vec2 gGrid = floor(xz / 400.0);
+    for (int di = -1; di <= 1; di++) {
+        for (int dj = -1; dj <= 1; dj++) {
+            vec2  cell   = gGrid + vec2(float(di), float(dj));
+            float r0     = hash(cell + vec2(7.1, 83.3));
+            if (r0 > 0.12) continue;              // ~12% — very rare
+            float r1     = hash(cell + vec2(3.9, 21.7));
+            float r2     = hash(cell + vec2(61.3, 44.1));
+            float radius  = 60.0 + r1 * 70.0;
+            vec2  center  = (cell + 0.5) * 400.0 + (vec2(r1, r2) - 0.5) * 280.0;
+            float dist    = length(xz - center) / radius;
+            h += giantCraterProfile(dist) * radius * 0.10;
+        }
+    }
 
     // Large craters (radius 15–40 units, grid 120)
     vec2 lGrid = floor(xz / 120.0);
@@ -88,9 +113,13 @@ float moonHeight(vec2 xz) {
         }
     }
 
-    // Base terrain undulation (scaled by terrain_roughness)
-    h += (noise(xz * 0.018) * 1.0
-        + noise(xz * 0.055) * 0.3) * terrain_roughness;
+    // Base terrain — macro hills down to surface texture (all scaled by terrain_roughness)
+    h += (noise(xz * 0.003) * 5.0      // ~330-unit rolling hills
+        + noise(xz * 0.008) * 2.5      // ~125-unit medium hills
+        + noise(xz * 0.018) * 1.0      // coarse undulation
+        + noise(xz * 0.055) * 0.30     // medium detail
+        + noise(xz * 0.13)  * 0.12)    // fine surface texture
+        * terrain_roughness;
 
     return h;
 }
@@ -136,22 +165,26 @@ float moonMtnH(float az) {
 }
 
 vec4 horizonMountains(vec3 rd, vec3 sunDir) {
+    // Anchor mountains to the terrain horizon so the gap closes at any altitude
+    float horizonEl = -cam_y / draw_distance;
+    float mtnMax    = 0.10;
+
     float el = rd.y;
-    if (el > 0.14 || el < -0.02) return vec4(0.0);
+    if (el > horizonEl + mtnMax + 0.04) return vec4(0.0);
+    if (el < horizonEl - 0.03)          return vec4(0.0);
 
     float az = atan(rd.x, rd.z);
-    float mh = moonMtnH(az) * 0.10;
+    float mh = horizonEl + moonMtnH(az) * mtnMax;  // peak angle relative to terrain horizon
     if (el > mh) return vec4(0.0);
 
     float eps = 0.006;
-    float dh  = (moonMtnH(az + eps) - moonMtnH(az - eps)) * 0.10;
+    float dh  = (moonMtnH(az + eps) - moonMtnH(az - eps)) * mtnMax;
     vec3  n   = normalize(vec3(-dh * cos(az), eps * 4.0, -dh * sin(az)));
 
     float diff  = max(dot(n, sunDir), 0.0);
-    float elT   = clamp(el / max(mh, 0.001), 0.0, 1.0);
+    float elT   = clamp((el - horizonEl) / max(mh - horizonEl, 0.001), 0.0, 1.0);
     float shade = 0.12 + diff * 0.55 + smoothstep(0.0, 0.7, elT) * 0.10;
 
-    // Grey rock — cool earthshine tint in shadow, warm in sunlight
     vec3 mtnCol = mix(vec3(0.08, 0.09, 0.11), vec3(shade * 0.82, shade * 0.84, shade * 0.88), shade);
     return vec4(mtnCol, 1.0);
 }
@@ -269,12 +302,19 @@ vec4 renderMain() {
     float epsNrm = max(dot(p - ro, p - ro) * (0.08 / RENDERSIZE.x), 0.02);
     vec3  n      = getNormal(p, epsNrm);
 
-    // --- Surface albedo — dark mare (0.15) to bright highland (0.72) ---
-    float alb_mare  = noise(p.xz * 0.012);        // large highland/mare patches
+    // --- Surface albedo — dark mare (0.10) to bright highland (0.75) ---
+    float alb_mare  = noise(p.xz * 0.012);              // large highland/mare patches
+    float alb_hills = noise(p.xz * 0.004) * 0.5 + 0.5; // hill-scale variation — bright hilltops
     float alb_mid   = noise(p.xz * 0.08)  * 0.08;
     float alb_fine  = noise(p.xz * 0.90)  * 0.03;
     float alb_micro = noise(p.xz * 4.0)   * 0.02;
-    float albedo    = clamp(0.22 + alb_mare * 0.44 + alb_mid + alb_fine + alb_micro, 0.15, 0.72);
+    // Height-correlated: crater floors darker, rolling hills brighter
+    float heightAlb = smoothstep(-3.0, 5.0, p.y) * 0.14;
+    float albedo    = clamp(0.18 + alb_mare * 0.38
+                                 + alb_hills * 0.08
+                                 + alb_mid + alb_fine + alb_micro
+                                 + heightAlb,
+                            0.10, 0.75);
 
     // Subtle warm/cool patch variation layered on top of moon_tint knob
     float warmPatch = noise(p.xz * 0.035);
@@ -306,6 +346,13 @@ vec4 renderMain() {
     // --- Horizon fade to space ---
     float fog = exp(-t * (2.0 / draw_distance));
     col = mix(skyCol * 0.01, col, fog);
+
+    // --- Blend horizon mountains over far terrain to close sky/terrain gap ---
+    float mtnFade = smoothstep(draw_distance * 0.80, draw_distance * 0.97, t);
+    if (mtnFade > 0.001) {
+        vec4 mtn = horizonMountains(rd, sunDir);
+        if (mtn.a > 0.5) col = mix(col, mtn.rgb, mtnFade);
+    }
 
     // --- Gamma ---
     col = pow(max(col, vec3(0.0)), vec3(0.78));
