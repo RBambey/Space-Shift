@@ -57,17 +57,21 @@ float DE(vec3 p0) {
     float h1 = fract(sin(tx * 127.1  + tz * 311.7 ) * 43758.5453);
     float h2 = fract(sin(tx * 269.5  + tz *  83.3 ) * 43758.5453);
     float h3 = fract(sin(tx *  12.9  + tz *  78.23) * 43758.5453);
+    float h4 = fract(sin(tx * 173.6  + tz * 153.9 ) * 43758.5453);
 
-    float rnd   = tree_density - 0.5 + h1 * 2.5;   // branching levels 0–3
-    float yStep = 0.26 + h2 * 0.38;                  // tier height (2.1–5.1 wu)
-    float splay = 0.10 + h3 * 0.44;                  // canopy spread
+    float rnd    = tree_density - 0.5 + h1 * 2.5;   // branching levels 0–3
+    float yStep  = 0.26 + h2 * 0.38;                 // tier height (2.1–5.1 wu)
+    float splay  = 0.10 + h3 * 0.44;                 // canopy spread
+    float hScale = h4 > 0.5 ? 0.5 : 1.0;            // 0.5 compresses y → tree is 2× taller
 
     // Wind sway — amplitude grows with height
     float dy = wind_strength * 0.2 * clamp(p.y + 0.4, 0.0, 1.0);
     p += sin(p.zxy + 2.0 * sin(p.yzx)) * dy;
 
-    float dg = p.y;               // ground plane
+    float dg = p.y;               // ground plane (before height scaling)
     float d  = 100.0, dr = 1.0;
+
+    p.y  *= hScale;               // compress y for tall trees (2× world height when hScale=0.5)
 
     p.xz  = mod(p.xz, 2.0) - 1.0;
     p.xz  = abs(p.xz);
