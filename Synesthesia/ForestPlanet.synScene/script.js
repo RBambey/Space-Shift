@@ -2,7 +2,7 @@
 // Adapted from Mars / Ocean Planet by RBambey
 //
 // Key settings vs Mars:
-//   - startY: 3.0  (mid-canopy in the forest; trees are ~8 world units tall)
+//   - startX: -4.0, startY: 5.0  (slightly left of center, just above canopy)
 //   - recenterY: min_height + 1.5  (skims just above ground)
 //   - altMin/altMax: driven by min_height / max_height controls
 
@@ -173,7 +173,7 @@ var cam = (function(opts) {
     function getPos() { return { x: camX, y: camY, z: camZ }; }
 
     return { setup: setup, update: update, getPos: getPos, pushUniforms: pushUniforms };
-})({ startY: 3.0 });
+})({ startX: -4.0, startY: 5.0 });
 
 function setup() {
     cam.setup();

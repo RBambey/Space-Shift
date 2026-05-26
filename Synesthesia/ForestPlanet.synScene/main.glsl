@@ -1,124 +1,95 @@
 // ============================================================
-//  FROSTED FOREST — v1.1
-//  Created by RBambey
-//  Tree SDF and rendering technique from "Frosted Forest"
-//  by eiffie (CC-BY-NC-SA 3.0)
-//  Strandbeest creature removed; pure forest remains.
-//  Flying controls from Ocean Planet by RBambey.
+//  FOREST PLANET — v2.0
+//  RBambey
+//  Tree SDF technique from "Frosted Forest" by eiffie (CC-BY-NC-SA 3.0).
+//  6-DOF flight from Ocean Planet by RBambey.
 //
-//  Architecture:
-//    - Trees are reed/tube SDFs with 3 levels of fractal branching
-//      (KIFS: scale×2 + 45° XZ fold per level). Each 2×2 tile has
-//      a different number of branching levels → natural variety.
-//    - Wind sway via sin-displaced coordinates, scaled by height.
-//    - "Jungle" look: lush greens on all surfaces; purple-tinted
-//      shadows created by lerping between a purple fill light and
-//      warm golden key light based on N·L. Fuzzy shadows blend
-//      toward vivid purple rather than plain darkening.
-//    - iY: per-ray SDF scale from eiffie — allows larger steps
-//      looking up through sparse canopy, conservative looking down.
-//    - Motion blur (temporal accumulation) smooths the per-frame
-//      random jitter that creates the soft needle texture.
+//  Trees: reed-tube SDFs with 3 levels of fractal branching (KIFS).
+//         Per-tile hashes give each tree unique branching depth, tier
+//         height, and canopy splay. Wind sway scales with height.
+//  Look:  vivid greens lit by warm sun, purple fill in shadow, yellow
+//         hotspots on brightest faces, hard ground shadows.
+//  Render: 4-checkpoint near-surface accumulation — thin branch tips
+//          become translucent. Temporal accumulation smooths texture.
 // ============================================================
 
-// ================================================================
-//  SCALE
-//  World space is TREE_SCALE × bigger than eiffie's original coords.
-//  Trees: ~8 world units tall.  Camera: typically 2–40 world units.
-// ================================================================
+// World scale. Trees ~8 units tall; camera typically 2–40 units up.
 const float TREE_SCALE = 8.0;
 
-// ================================================================
-//  TREE SDF — reed tube with fractal branching (from eiffie)
-//
-//  reed(): tapered cylinder, height y=[0,1], radius 0.02→0
-// ================================================================
-float reed(vec3 p) {
-    return max(length(p.xz) - 0.02 + p.y * 0.02,
-               abs(p.y - 0.5) - 0.5);
+// Fixed sun direction (azimuth 0.15 turn, elevation sin=0.18).
+// Pre-computed: cos(54°)*cos(10.4°), 0.18, sin(54°)*cos(10.4°) ≈ unit length.
+const vec3 SUN_DIR = vec3(0.578, 0.180, 0.796);
+const vec3 SUN_COL = vec3(1.0, 0.82, 0.52);   // warm amber-gold
+
+// Globals set once per pixel at the start of renderMain
+float iY;          // per-ray SDF conservatism (eiffie technique)
+float g_randState; // per-pixel random seed
+
+// ---- Utilities --------------------------------------------------------
+
+float linstep(float a, float b, float t) {
+    return clamp((t - a) / (b - a), 0.0, 1.0);
 }
-
-// Per-ray SDF conservatism factor (set once per pixel in renderMain)
-float iY;
-
-// ================================================================
-//  RANDOM — seeded per pixel per frame, used for march jitter
-// ================================================================
-float g_randState;
 
 float rand2() {
     g_randState = fract(sin(g_randState * 127.1 + 311.7) * 43758.5453);
     return g_randState;
 }
 
-// ================================================================
-//  SCENE SDF
-//
-//  Beestie creature completely removed from original.
-//  Trees tile every 2 original units = 2×TREE_SCALE world units.
-//
-//  Per-tile variety: three independent hash values drive uncorrelated
-//  variation in branching depth, tier height, and canopy splay so
-//  each tree has a distinct character — short/tall, wide/narrow.
-// ================================================================
-float DE(vec3 p0) {
-    vec3 p = p0 / TREE_SCALE;    // work in original-shader coordinates
+// ---- Tree primitive ----------------------------------------------------
 
-    // --- Per-tile hashes: computed before wind moves the position ---
-    // Using three uncorrelated hash functions avoids periodic patterns
+// Tapered cylinder: height y∈[0,1], radius 0.02→0
+float reed(vec3 p) {
+    return max(length(p.xz) - 0.02 + p.y * 0.02,
+               abs(p.y - 0.5) - 0.5);
+}
+
+// ---- Scene SDF ---------------------------------------------------------
+// Trees tile every 2×TREE_SCALE world units. Three per-tile hashes give
+// each tree a distinct branching depth, tier height, and canopy splay.
+
+float DE(vec3 p0) {
+    vec3  p  = p0 / TREE_SCALE;
+
+    // Tile hashes — computed before wind to avoid boundary jitter
     float tx = floor(p.x * 0.5);
     float tz = floor(p.z * 0.5);
-    float h1 = fract(sin(tx * 127.1  + tz * 311.7 ) * 43758.5453);  // branching
-    float h2 = fract(sin(tx * 269.5  + tz *  83.3 ) * 43758.5453);  // tier height
-    float h3 = fract(sin(tx *  12.9  + tz *  78.23) * 43758.5453);  // splay
+    float h1 = fract(sin(tx * 127.1  + tz * 311.7 ) * 43758.5453);
+    float h2 = fract(sin(tx * 269.5  + tz *  83.3 ) * 43758.5453);
+    float h3 = fract(sin(tx *  12.9  + tz *  78.23) * 43758.5453);
 
-    // Branching levels (0–3): hash-driven → no periodic grid pattern
-    float rnd   = tree_density - 0.5 + h1 * 2.5;
+    float rnd   = tree_density - 0.5 + h1 * 2.5;   // branching levels 0–3
+    float yStep = 0.26 + h2 * 0.38;                  // tier height (2.1–5.1 wu)
+    float splay = 0.10 + h3 * 0.44;                  // canopy spread
 
-    // Tier height: short stumpy trees vs tall elegant ones
-    // 0.26–0.64 in original coords → 2.1–5.1 world units per tier
-    float yStep = 0.26 + h2 * 0.38;
-
-    // Branch splay: narrow columnar vs wide drooping canopy
-    float splay = 0.10 + h3 * 0.44;
-
-    // Wind sway — amplitude increases with height
+    // Wind sway — amplitude grows with height
     float dy = wind_strength * 0.2 * clamp(p.y + 0.4, 0.0, 1.0);
     p += sin(p.zxy + 2.0 * sin(p.yzx)) * dy;
 
-    float dg = p.y;               // ground plane distance
+    float dg = p.y;               // ground plane
     float d  = 100.0, dr = 1.0;
 
-    // XZ tile: trees repeat every 2 original units
     p.xz  = mod(p.xz, 2.0) - 1.0;
     p.xz  = abs(p.xz);
-    p.xz -= p.y * p.y * splay;   // per-tree canopy spread
+    p.xz -= p.y * p.y * splay;
+    d     = reed(p) / dr;
 
-    d = reed(p) / dr;
-
-    // Fractal branching: 3 levels of scale×2 + 45° XZ fold
+    // 3 levels of scale×2 + 45° XZ fold (break is valid here: predicate is monotonic)
     for (int i = 0; i < 3; i++) {
-        if (float(i) > rnd) continue;
-        p.y  -= yStep;            // per-tree tier height
+        if (float(i) > rnd) break;
+        p.y  -= yStep;
         p    *= 2.0;  dr *= 2.0;
         p.xz  = abs(vec2(p.x + p.z, p.x - p.z)) * 0.707;
         p.xz -= p.y * p.y * splay;
         d     = min(d, reed(p) / dr);
     }
 
-    // World-space distance: ground overestimate × 2 keeps march fast;
-    // iY makes steps conservative looking up through canopy
+    // Ground ×2 overestimates safely; iY makes canopy steps conservative
     return min(dg * 2.0, d * (1.0 - 0.5 * dy) / iY) * TREE_SCALE;
 }
 
-// ================================================================
-//  UTILITIES
-// ================================================================
-float linstep(float a, float b, float t) {
-    return clamp((t - a) / (b - a), 0.0, 1.0);
-}
+// ---- Normal (tetrahedron finite differences, 4 DE calls) ---------------
 
-// Normal via tetrahedron finite differences (4 DE calls)
 vec3 getForestNormal(vec3 p, float eps) {
     const vec2 k = vec2(1.0, -1.0);
     return normalize(
@@ -129,15 +100,14 @@ vec3 getForestNormal(vec3 p, float eps) {
     );
 }
 
-// ================================================================
-//  FUZZY SHADOW (simplified from eiffie — 8-step fuzzy cone)
-//  Applied only to the closest surface hit for performance.
-// ================================================================
-float FuzzyShadow(vec3 ro, vec3 rd, float lightDist, float rCoC) {
+// ---- Shadows -----------------------------------------------------------
+
+// Soft shadow cone for tree surfaces (8 steps, fuzzy penumbra)
+float fuzzyShadow(vec3 ro, vec3 rd, float maxDist, float fuzzR) {
     float t = 0.05, s = 1.0;
     for (int i = 0; i < 8; i++) {
-        if (t > lightDist) break;
-        float r = rCoC + t * 0.05;
+        if (t > maxDist) break;
+        float r = fuzzR + t * 0.05;
         float d = DE(ro + rd * t) + r * 0.5;
         s *= linstep(-r, r, d);
         t += abs(d) * (0.85 + 0.15 * rand2());
@@ -145,22 +115,16 @@ float FuzzyShadow(vec3 ro, vec3 rd, float lightDist, float rCoC) {
     return clamp(s, 0.0, 1.0);
 }
 
-// ================================================================
-//  GROUND SHADOW — hard shadows cast by trunks/branches onto floor
-//
-//  Uses more steps and sets iY correctly for upward shadow rays
-//  (camera ray iY would be wrong — sun is going up through canopy).
-//  Tight, near-constant penumbra so trunk shadows read as solid dark.
-// ================================================================
+// Hard ground shadow (16 steps, resets iY for upward rays through canopy)
 float groundShadow(vec3 ro, vec3 rd) {
     float savedIY = iY;
-    iY = 1.0 + max(0.0, 2.0 * rd.y);  // conservative upward stepping through canopy
+    iY = 1.0 + max(0.0, 2.0 * rd.y);
 
     float t = 0.05, s = 1.0;
-    for (int i = 0; i < 22; i++) {
+    for (int i = 0; i < 16; i++) {
         if (t > 62.0 || s < 0.01) break;
-        float r  = 0.14 + t * 0.008;          // tight cone — stays narrow at distance
-        float d  = DE(ro + rd * t) + r * 0.3;
+        float r = 0.14 + t * 0.008;
+        float d = DE(ro + rd * t) + r * 0.3;
         s *= linstep(-r, r, d);
         t += max(abs(d), r * 0.25) * (0.9 + 0.1 * rand2());
     }
@@ -169,164 +133,173 @@ float groundShadow(vec3 ro, vec3 rd) {
     return clamp(s, 0.0, 1.0);
 }
 
-// ================================================================
-//  SKY — cool winter blue, warm golden low sun
-// ================================================================
-vec3 forestSky(vec3 rd, vec3 L, vec3 sunCol) {
-    vec3  horizon = vec3(0.18, 0.58, 0.72);   // clean cyan-blue horizon, no green muddiness
-    vec3  zenith  = vec3(0.04, 0.12, 0.85);   // deep saturated blue zenith
-    float y       = clamp(rd.y, 0.0, 1.0);
-    vec3  sky     = mix(horizon, zenith, pow(y, 0.55));
+// ---- Cloud noise (4-octave value FBM) ----------------------------------
 
-    // Warm amber-gold sun haze low on the horizon
-    sky = mix(sky, vec3(0.72, 0.60, 0.22), exp(-abs(rd.y) * 8.0) * 0.20);
+float cloudHash(vec2 p) {
+    p = fract(p * vec2(127.1, 311.7));
+    p += dot(p, p + 17.5);
+    return fract(p.x * p.y);
+}
 
-    // Sun disc + glow — small crisp disc with narrow halo
-    float sunDot  = dot(rd, L);
-    float sunDisc = smoothstep(0.9994, 0.9998, sunDot);  // tight disc (~2° radius)
-    float sunGlow = pow(max(sunDot, 0.0), 64.0) * 0.40   // tight bright inner halo
-                  + pow(max(sunDot, 0.0), 10.0) * 0.08;  // narrow wider corona
-    sky += sunCol * sunDisc * 2.5;
-    sky += sunCol * sunGlow;
+float cloudNoise(vec2 p) {
+    vec2 i = floor(p), f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    return mix(mix(cloudHash(i),             cloudHash(i + vec2(1,0)), f.x),
+               mix(cloudHash(i + vec2(0,1)), cloudHash(i + vec2(1,1)), f.x), f.y);
+}
+
+float cloudFBM(vec2 p) {
+    const mat2 m = mat2(1.6, 1.2, -1.2, 1.6);
+    float v = 0.0, a = 0.5;
+    for (int i = 0; i < 4; i++) {
+        v += a * cloudNoise(p);
+        p  = m * p;
+        a *= 0.5;
+    }
+    return v;
+}
+
+// ---- Sky ---------------------------------------------------------------
+// sunDot = dot(rd, SUN_DIR), pre-computed by caller to avoid recomputing.
+
+vec3 forestSky(vec3 rd, float sunDot) {
+    // Base gradient: cyan-blue horizon → deep blue zenith
+    float y   = clamp(rd.y, 0.0, 1.0);
+    vec3  sky = mix(vec3(0.08, 0.22, 0.80), vec3(0.03, 0.08, 0.88), pow(y, 0.55));
+    sky = mix(sky, vec3(0.72, 0.60, 0.22), exp(-abs(rd.y) * 8.0) * 0.20);  // sun haze
+
+    // Clouds — overhead only, fade to zero below 24°
+    if (rd.y > 0.12) {
+        // Flat-plane projection: ray intersects cloud layer at altitude 80.
+        // Unlike rd.xz/rd.y, this stays spread-out when looking straight up.
+        float tCloud = max(80.0 - cam_y, 1.0) / rd.y;
+        vec2  uv     = rd.xz * tCloud * 0.007 + TIME * vec2(0.005, 0.002);
+        float c      = cloudFBM(uv * 1.8) * 0.70 + cloudFBM(uv * 4.2 + vec2(5.3, 2.1)) * 0.30;
+        float alpha  = smoothstep(0.22, 0.52, c) * cloud_cover
+                     * smoothstep(0.12, 0.40, rd.y);
+        float dense  = smoothstep(0.48, 0.90, c);
+        vec3  cCol   = mix(vec3(0.96, 0.98, 0.95), vec3(0.55, 0.62, 0.76), dense * 0.55)
+                     * (sunDot * 0.15 + 0.85);
+        cCol        += SUN_COL * pow(max(sunDot, 0.0), 8.0) * 0.10 * alpha;
+        sky          = mix(sky, cCol, alpha);
+    }
+
+    // Sun disc + glow
+    float sunDisc = smoothstep(0.9994, 0.9998, sunDot);
+    float sunGlow = pow(max(sunDot, 0.0), 64.0) * 0.40
+                  + pow(max(sunDot, 0.0), 10.0) * 0.08;
+    sky += SUN_COL * (sunDisc * 2.5 + sunGlow);
 
     return sky;
 }
 
-// ================================================================
+// ---- Main --------------------------------------------------------------
+
 vec4 renderMain() {
 
-    // ---- Seed random state from pixel + time ----
-    // Combined with motion_blur, the per-frame jitter creates the
-    // smooth frosted texture through temporal accumulation.
-    g_randState = fract(sin(dot(_uv * RENDERSIZE,
-                                vec2(12.9898, 78.233))
+    // Seed per-pixel random state (combined with motion_blur creates frosted texture)
+    g_randState = fract(sin(dot(_uv * RENDERSIZE, vec2(12.9898, 78.233))
                             + TIME * 3.71) * 43758.5453);
 
-    // ---- Camera (Ocean Planet 6-DOF basis) ----
-    vec3 ro     = vec3(cam_x, cam_y, cam_z);
-    vec3 cRight = vec3(cam_rx, cam_ry, cam_rz);
-    vec3 cUp    = vec3(cam_ux, cam_uy, cam_uz);
-    vec3 cFwd   = vec3(cam_fx, cam_fy, cam_fz);
-    vec2 uv     = (_uv - 0.5) * vec2(RENDERSIZE.x / RENDERSIZE.y, 1.0);
-    vec3 rd     = normalize(cFwd + cRight * uv.x + cUp * uv.y);
+    // Camera basis (6-DOF, driven by script.js via setUniform)
+    vec3 ro = vec3(cam_x, cam_y, cam_z);
+    vec2 sc = (_uv - 0.5) * vec2(RENDERSIZE.x / RENDERSIZE.y, 1.0);
+    vec3 rd = normalize(vec3(cam_fx, cam_fy, cam_fz)
+                      + vec3(cam_rx, cam_ry, cam_rz) * sc.x
+                      + vec3(cam_ux, cam_uy, cam_uz) * sc.y);
 
-    // ---- Sun direction (fixed: azimuth 0.15 turn, elevation sin=0.18) ----
-    // Pre-computed: normalize(cos(54°)*cos(10.4°), 0.18, sin(54°)*cos(10.4°))
-    vec3  L      = normalize(vec3(0.578, 0.180, 0.796));
-    vec3  sunCol = vec3(1.0, 0.82, 0.52);    // warm amber-gold sun
-
-    // ---- SDF scale adjustment (eiffie's technique) ----
-    // Larger iY when looking upward → smaller steps through canopy
+    // SDF step scale: conservative (small steps) when looking up through canopy
     iY = 1.0 + max(0.0, 2.0 * rd.y);
 
-    // ---- Background sky ----
-    vec3 bcol = forestSky(rd, L, sunCol);
+    float sunDot = dot(rd, SUN_DIR);
+    vec3  bcol   = forestSky(rd, sunDot);
 
-    // ================================================================
-    //  Ray march with 4-checkpoint frosted accumulation
-    //
-    //  When the ray comes within branch_fuzz of a surface, it stores
-    //  a checkpoint rather than immediately stopping. Up to 4 of these
-    //  are collected, then shaded and composited back-to-front.
-    //  Each checkpoint contributes partial opacity proportional to how
-    //  far inside the fuzz radius it reached — thin needles (whose
-    //  radius < branch_fuzz) become translucent and ghostly.
-    // ================================================================
-    vec4  col  = vec4(bcol, 0.0);    // rgb=color accumulator, a=opacity
-    float rCoC = branch_fuzz;        // fuzz radius in world units
-
+    // ---- Ray march: collect up to 4 near-surface checkpoints ----
+    // Each checkpoint within fuzzR of a surface is shaded and composited
+    // back-to-front. Branches thinner than fuzzR become translucent.
+    float fuzzR = branch_fuzz;
     float h[4];
     h[0] = 0.0;  h[1] = 0.0;  h[2] = 0.0;  h[3] = 0.0;
-    int H = 0;
+    int  nHits = 0;
+    vec4 col   = vec4(bcol, 0.0);
 
     float t = 0.05;
     for (int i = 0; i < 70; i++) {
         if (col.w > 0.9 || t > draw_distance) break;
         float d = DE(ro + rd * t);
-        if (d < rCoC && H < 4) { h[H] = t;  H++; }
-        d *= 0.85 + 0.15 * rand2();            // jitter: fuzz + banding prevention
-        t += max(d, rCoC * 0.1);               // minimum step avoids infinite loop
+        if (d < fuzzR && nHits < 4) { h[nHits] = t;  nHits++; }
+        d *= 0.85 + 0.15 * rand2();
+        t += max(d, fuzzR * 0.1);
     }
 
-    // ---- Shade checkpoints far→near (back-to-front) ----
+    // ---- Shade checkpoints back-to-front ----
     for (int i = 3; i >= 0; i--) {
         if (h[i] == 0.0) continue;
 
         vec3  p    = ro + rd * h[i];
         float dHit = DE(p);
-        vec3  N    = getForestNormal(p, rCoC * 1.2);
-        if (dot(N, N) < 0.01) N = -rd;         // fallback: facing camera
+        vec3  N    = getForestNormal(p, fuzzR * 1.2);
+        if (dot(N, N) < 0.01) N = -rd;
 
-        float localY = p.y / TREE_SCALE;        // 0=ground, ~1=canopy
-
-        // ---- Material ----
-        // Top-facing surfaces: bright leaf green catches light
-        // Side-facing surfaces: deep forest bark
+        float localY   = p.y / TREE_SCALE;   // 0 = ground, ~1 = canopy top
         float topFace  = smoothstep(0.0, 0.7, N.y);
         float isGround = smoothstep(0.12, 0.0, localY) * topFace;
 
-        vec3 barkCol   = vec3(0.06, 0.52, 0.05);   // vivid forest green bark
-        vec3 leafCol   = mix(vec3(0.10, 0.65, 0.08),   // vivid mid-green (sides)
-                             vec3(0.22, 0.98, 0.08),    // electric bright green (tops)
-                             topFace);
-        vec3 groundCol = vec3(0.06, 0.52, 0.05);   // vivid bright moss floor
-        vec3 scol = mix(mix(barkCol, leafCol, topFace * 0.6),
-                        groundCol, isGround);
+        // Material: bark → leaf (sides/tops) → ground moss
+        vec3 baseCol = mix(
+            mix(vec3(0.06, 0.52, 0.05),
+                mix(vec3(0.10, 0.65, 0.08), vec3(0.22, 0.98, 0.08), topFace),
+                topFace * 0.6),
+            vec3(0.06, 0.52, 0.05),
+            isGround);
 
-        // ---- Lighting: purple shadow, bright green sun, warm yellow highlights ----
-        float ndotl   = clamp(dot(N, L), 0.0, 1.0);
+        // Lighting: ambient + strong warm sun + hotspot + specular
+        float ndotl   = clamp(dot(N, SUN_DIR), 0.0, 1.0);
         float hotspot = smoothstep(0.55, 1.0, ndotl) * (0.4 + topFace * 0.6);
-        vec3 sunDiffuse  = scol * vec3(1.05, 0.95, 0.78) * ndotl;
-        vec3 purpleFill  = vec3(0.14, 0.02, 0.32) * (1.0 - ndotl);
-        vec3 yellowHot   = vec3(0.60, 0.52, 0.02) * hotspot;  // warm yellow on brightest faces
-        float spec       = pow(max(dot(reflect(rd, N), L), 0.0), 10.0) * 0.70;
-        scol = sunDiffuse + purpleFill + yellowHot + sunCol * spec;
 
-        // ---- Shadow ----
+        // Ambient: hemisphere — all warm green, no blue anywhere in shadows
+        vec3 ambient  = vec3(0.03, 0.08, 0.02)
+                      + vec3(0.03, 0.10, 0.02) * (dot(N, SUN_DIR) * 0.5 + 0.5);
+        // Direct sun: strong — lit faces pop hard against dark shadows
+        vec3 sun      = baseCol * SUN_COL * ndotl * 2.8;
+        vec3 hot      = vec3(0.55, 0.48, 0.02) * hotspot;
+        vec3 spec     = SUN_COL * pow(max(dot(reflect(rd, N), SUN_DIR), 0.0), 10.0) * 0.50;
+        vec3 scol     = baseCol * ambient + sun + hot + spec;
+
+        // Shadow — mix from very dark shadow color to full lit
         if (localY < 0.15) {
-            // Ground: hard shadow with 22 steps + correct iY for upward rays.
-            // Gives solid dark pools around trunks and branch shadow streaks.
-            vec3  shadowP = p + vec3(0.0, 0.03, 0.0);   // nudge off flat ground
-            float shadow  = groundShadow(shadowP, L);
-            scol += vec3(0.08, 0.01, 0.20) * (1.0 - shadow);   // purple tint in shadow
-            scol *= 0.15 + shadow * 0.85;                        // very dark under trees
+            // Ground: deep dark pools beneath trunks and branches
+            float shadow   = groundShadow(p + vec3(0.0, 0.03, 0.0), SUN_DIR);
+            vec3 shadowCol = baseCol * ambient * 0.10 + vec3(0.00, 0.01, 0.00);
+            scol = mix(shadowCol, scol, shadow);
         } else if (i == 0) {
-            // Nearest surface (tree/trunk): soft fuzzy shadow
-            vec3  shadowP = p + N * max(0.0, -dHit + 0.02);
-            float shadow  = FuzzyShadow(shadowP, L, 55.0, rCoC);
-            scol += vec3(0.10, 0.01, 0.24) * (1.0 - shadow);
-            scol *= 0.40 + shadow * 0.60;
+            // Nearest tree surface: soft fuzzy shadow
+            vec3  sp       = p + N * max(0.0, -dHit + 0.02);
+            float shadow   = fuzzyShadow(sp, SUN_DIR, 55.0, fuzzR);
+            vec3 shadowCol = baseCol * ambient * 0.25 + vec3(0.00, 0.01, 0.00);
+            scol = mix(shadowCol, scol, shadow);
         }
 
-        // ---- Bass: subtle canopy brightness pulse ----
-        scol *= 1.0 + syn_BassLevel * bass_reactivity * 0.3;
+        scol *= 1.0 + syn_BassLevel * bass_reactivity * 0.3;                    // bass pulse
+        vec3 fogCol = vec3(0.06, 0.36, 0.08);                                   // deep jungle green haze
+        scol = mix(scol, fogCol, 1.0 - exp(-h[i] / (draw_distance * 2.5)));    // distance fog
 
-        // ---- Distance fog → sky color (very gentle — preserve vivid surface colors) ----
-        float fogAmt = 1.0 - exp(-h[i] / (draw_distance * 2.8));
-        scol = mix(scol, bcol, fogAmt);
-
-        // ---- Back-to-front alpha composite ----
-        // alpha: 0 when just at fuzz boundary, 1 when well inside surface
-        float alpha = (1.0 - col.w) * linstep(-rCoC, rCoC, -dHit);
+        // Back-to-front alpha composite
+        float alpha = (1.0 - col.w) * linstep(-fuzzR, fuzzR, -dHit);
         col = mix(col, vec4(scol, min(col.w + alpha, 1.0)), alpha);
     }
 
-    // Composite accumulated surface over sky
     vec3 finalCol = mix(bcol, col.rgb, col.w);
 
-    // ---- Gamma + saturation boost — vivid, punchy, no muddiness ----
-    finalCol = pow(max(finalCol, vec3(0.0)), vec3(0.85));
-    float lum = dot(finalCol, vec3(0.299, 0.587, 0.114));
-    finalCol  = mix(vec3(lum), finalCol, 1.45);   // +45% saturation
+    // Gamma + saturation boost
+    finalCol = pow(max(finalCol, vec3(0.0)), vec3(0.72));
+    finalCol = mix(vec3(dot(finalCol, vec3(0.299, 0.587, 0.114))), finalCol, 1.45);
 
-    // ---- Vignette ----
-    vec2 q = _uv;
-    finalCol *= pow(16.0 * q.x * q.y * (1.0 - q.x) * (1.0 - q.y), 0.1) * 0.9 + 0.1;
+    // Vignette
+    finalCol *= pow(16.0 * _uv.x * _uv.y * (1.0 - _uv.x) * (1.0 - _uv.y), 0.1) * 0.9 + 0.1;
 
-    // ---- Motion blur — temporal accumulation smooths the noise ----
-    // Higher motion_blur = smoother frosted texture, softer motion
-    vec4 past = texture(syn_FinalPass, _uv);
-    finalCol = mix(finalCol, past.rgb, motion_blur);
+    // Motion blur (temporal accumulation — smooths the per-frame fuzz noise)
+    finalCol = mix(finalCol, texture(syn_FinalPass, _uv).rgb, motion_blur);
 
     return vec4(finalCol, 1.0);
 }

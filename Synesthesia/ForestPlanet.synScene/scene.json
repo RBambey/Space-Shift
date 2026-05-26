@@ -113,6 +113,16 @@
 			"UI_GROUP" : "Forest"
 		},
 		{
+			"DEFAULT" : 0.90,
+			"DESCRIPTION" : "How much of the sky is covered by clouds. 0 = clear, 1 = overcast.",
+			"MAX" : 1.0,
+			"MIN" : 0.0,
+			"NAME" : "cloud_cover",
+			"PARAMS" : 0.05,
+			"TYPE" : "slider smooth",
+			"UI_GROUP" : "Sky"
+		},
+		{
 			"DEFAULT" : 0.35,
 			"DESCRIPTION" : "Temporal blur — blends current frame with previous. Higher = smoother frosted texture, more motion trails.",
 			"MAX" : 0.992,
