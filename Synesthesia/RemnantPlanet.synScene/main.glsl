@@ -19,9 +19,10 @@ float absScalem1           = abs(SCALE - 1.0);
 float AbsScaleRaisedTo1mIters = pow(abs(SCALE), float(1 - 10));
 vec4  mboxScale            = vec4(SCALE, SCALE, SCALE, abs(SCALE)) / minRad2;
 
-// Tile the world into [-2, 2] cells with period 4 — infinite Mandelbox copies
+// Tile the world into [-2, 2] cells with period 7 — copies spaced 3 units apart
+// Fractal structure fills [-2, 2]; period > 4 adds void between each copy.
 vec3 tile(vec3 pos) {
-    return mod(pos + 2.0, 4.0) - 2.0;
+    return mod(pos + 3.5, 7.0) - 3.5;
 }
 
 // Surface orbit-trap colours — modified per-pixel inside Colour()
