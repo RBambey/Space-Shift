@@ -1,0 +1,127 @@
+{
+	"CONTROLS" :
+	[
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "Trigger a complete barrel roll.",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "barrel_roll",
+			"TYPE" : "bang",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "Smoothly return to level, forward flight.",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "recenter",
+			"TYPE" : "bang",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 0.1,
+			"DESCRIPTION" : "Forward flight speed in units per second. The fractal repeats every 6 units.",
+			"MAX" : 5.0,
+			"MIN" : 0.05,
+			"NAME" : "fly_speed",
+			"TYPE" : "slider",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "Nose up/down. Steers your path through the fractal cosmos.",
+			"MAX" : 1,
+			"MIN" : -1,
+			"NAME" : "pitch",
+			"TYPE" : "slider",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "Roll left/right.",
+			"MAX" : 1,
+			"MIN" : -1,
+			"NAME" : "roll_rate",
+			"TYPE" : "slider",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "Rudder left/right. Stacks with banking.",
+			"MAX" : 1,
+			"MIN" : -1,
+			"NAME" : "yaw_rate",
+			"TYPE" : "slider",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 10,
+			"DESCRIPTION" : "How far the ray travels before fading into background. Lower = cozier/closer. Higher = more structure visible at once.",
+			"MAX" : 25,
+			"MIN" : 3,
+			"NAME" : "draw_distance",
+			"TYPE" : "slider",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : -2.0,
+			"DESCRIPTION" : "Mandelbox scale — reshapes the fractal entirely. -1.5 = dense caves. -2.0 = balanced (default). -3.0 = crystal lattice.",
+			"MAX" : -1.0,
+			"MIN" : -3.0,
+			"NAME" : "box_scale",
+			"TYPE" : "slider",
+			"UI_GROUP" : "Fractal"
+		},
+		{
+			"DEFAULT" : 1.0,
+			"DESCRIPTION" : "Size of the decorative circle-grid overlay on the fractal surface and glow.",
+			"MAX" : 4.0,
+			"MIN" : 0.1,
+			"NAME" : "pattern_scale",
+			"TYPE" : "slider",
+			"UI_GROUP" : "Fractal"
+		},
+		{
+			"DEFAULT" : 0.4,
+			"DESCRIPTION" : "Speed of the pattern rotation and beat-sync color drift.",
+			"MAX" : 3.0,
+			"MIN" : 0.0,
+			"NAME" : "color_speed",
+			"TYPE" : "slider",
+			"UI_GROUP" : "Fractal"
+		},
+		{
+			"DEFAULT" : 1.0,
+			"DESCRIPTION" : "Intensity of the volumetric glow halo around fractal surfaces. Higher = more nebula, more bloom.",
+			"MAX" : 3.0,
+			"MIN" : 0.1,
+			"NAME" : "glow_amount",
+			"TYPE" : "slider",
+			"UI_GROUP" : "Fractal"
+		},
+		{
+			"DEFAULT" : 0.0,
+			"DESCRIPTION" : "Base hue for the cosine color palette. Full turn cycles through the entire spectrum.",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "base_hue",
+			"TYPE" : "knob smooth",
+			"UI_GROUP" : "Color"
+		}
+	],
+	"CREDIT" : "RBambey",
+	"DESCRIPTION" : "Fly through an infinite Mandelbox fractal cosmos. The fractal tiles endlessly in every direction — there are no walls, no edges. Volumetric glow makes the structure bloom like a nebula. Bass pulses the brightness.",
+	"GPU" : 0,
+	"HEIGHT" : 1080,
+	"IMAGE_PATH" : "default_thumbnail.png",
+	"MEDIA" :
+	[
+		{
+			"FILTER" : "linear",
+			"WRAP" : "repeat"
+		}
+	],
+	"TITLE" : "Natalie's Fractal",
+	"WIDTH" : 1920
+}
