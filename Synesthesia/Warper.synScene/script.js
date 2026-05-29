@@ -6,6 +6,7 @@
 var warpRoll  = 0.0;
 var warpPitch = 0.0;
 var warpYaw   = 0.0;
+var warpTime  = 0.0;  // smooth integrated travel time — avoids TIME * speed jump/precision issues
 
 var rollIdleTime  = 0.0;
 var pitchIdleTime = 0.0;
@@ -24,6 +25,7 @@ function setup() {
     setUniform("warp_roll",  0.0);
     setUniform("warp_pitch", 0.0);
     setUniform("warp_yaw",   0.0);
+    setUniform("warp_time",  0.0);
 }
 
 function update(dt) {
@@ -32,6 +34,10 @@ function update(dt) {
     var yr   = yaw_rate    || 0.0;
     var bang = barrel_roll || 0.0;
     var rc   = recenter    || 0.0;
+
+    // ---- Travel time (integrated — smooth speed ramp, no TIME precision issues) ----
+    warpTime = (warpTime + (fly_speed || 0.0) * dt) % 100.0;
+    setUniform("warp_time", warpTime);
 
     // ---- Recenter ----
     if (rc > 0.5 && prevRecenter < 0.5) recenterActive = true;
@@ -83,7 +89,7 @@ function update(dt) {
 
         if (!autoRollActive) {
             warpRoll += rr * Math.PI * 1.5 * dt;
-            if (rollIdleTime > 1.5) warpRoll += (0.0 - warpRoll) * 0.5 * dt;
+            // No auto-level for roll — view holds at current angle when control is released
         }
     }
 

@@ -29,24 +29,23 @@ vec4 renderMain() {
     vec2 p = _uvc * (2.0 * RENDERSIZE.y / sqrt(RENDERSIZE.x * RENDERSIZE.y)) * 0.1;
 
     // ---- 2D camera from script.js ----
-    // Pitch/yaw shift the vortex centre; roll rotates the view
-    p -= vec2(warp_yaw, warp_pitch) * 0.04;
+    // Pitch/yaw offset scaled for ~60° effective range; roll rotates the view
+    p -= vec2(warp_yaw * 0.09, warp_pitch * 0.05);
     p  = rot2(p, warp_roll);
 
-    // ---- Inversion warp (from original) ----
-    float f = length(p) - 0.001 / length(p);
-    p -= p / dot(p, p) * 0.001;
+    // ---- Inversion warp — invScale audio-reactive so centre sphere breathes with bass ----
+    // At silence: sphere radius = sqrt(0.001) ≈ 0.032; at peak bass: sqrt(0.005) ≈ 0.071
+    float invScale = 0.001 + syn_BassLevel * bass_reactivity * 0.004;
+    float f = length(p) - invScale / length(p);
+    p -= p / dot(p, p) * invScale;
 
-    // ---- Speed — bass swells the rate ----
-    float speed = fly_speed * (1.0 + syn_BassLevel * bass_reactivity * 0.4);
-
-    // ---- Main accumulation loop ----
+    // ---- Main accumulation loop (warp_time from script.js — smooth, precision-safe) ----
     vec4 c = vec4(0.0, 0.0, 0.0, 1.0);
 
     for (float i = 1.0; i < 14.0; i++) {
         // kY0 = k.y before time offset; used in denominator to match original
         float kY0  = 0.003 / length(p) * i;
-        float tSgn = TIME * speed * sign(f);
+        float tSgn = warp_time * sign(f);
         vec2  k    = vec2(atan(p.y, p.x) / PI + 100.0, kY0 + tSgn);
 
         for (float j = 0.0; j < 16.0; j++) {
@@ -60,7 +59,7 @@ vec4 renderMain() {
 
             c.xyz += min(
                 pow(max(0.3 / (length(o) / 0.08) - 0.01, 0.0), 2.0)
-                * (sin((j * 0.25 - i * 0.65) + TIME * speed
+                * (sin((j * 0.25 - i * 0.65) + warp_time
                        + vec3(0.0, 2.0, 4.0) / 3.0 * PI) * 0.5 + 0.5),
                 3.5)
                 / (0.8 * kY0 + 1.0)
