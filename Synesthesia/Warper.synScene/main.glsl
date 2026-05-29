@@ -24,8 +24,9 @@ vec2 rot2(vec2 v, float a) {
 vec4 renderMain() {
 
     // ---- Centered, aspect-normalised coordinates ----
-    // Matches original: p = (p + p - r) / sqrt(r.x * r.y) * 0.1
-    vec2 p = _uvc * 2.0 * RENDERSIZE / sqrt(RENDERSIZE.x * RENDERSIZE.y) * 0.1;
+    // _uvc.x already has aspect ratio baked in, so use RENDERSIZE.y uniformly for both
+    // axes — avoids double-applying aspect and keeps circles perfectly round.
+    vec2 p = _uvc * (2.0 * RENDERSIZE.y / sqrt(RENDERSIZE.x * RENDERSIZE.y)) * 0.1;
 
     // ---- 2D camera from script.js ----
     // Pitch/yaw shift the vortex centre; roll rotates the view
