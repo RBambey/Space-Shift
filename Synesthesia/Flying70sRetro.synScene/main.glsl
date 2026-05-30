@@ -42,7 +42,7 @@ vec3 terrainColor(vec3 hit, float dist) {
     float hU = terrain(hit.xz + vec2(0.0,  eps));
     vec3 normal = normalize(vec3(hL - hR, 2.0 * eps, hD - hU));
 
-    // Directional light — from upper-right-forward (toward ringed planet)
+    // Directional light — from upper-right-forward (toward Jupiter)
     vec3  lightDir = normalize(vec3(0.35, 0.85, 0.35));
     float diffuse  = max(0.0, dot(normal, lightDir));
 
@@ -62,86 +62,57 @@ vec3 terrainColor(vec3 hit, float dist) {
     return col;
 }
 
-// ---- Ringed Planet ----
+// ---- Jupiter-like Planet ----
 vec3 drawPlanet(vec3 rd) {
-    vec3  planetDir = normalize(vec3(0.28, 0.22, 1.0));  // upper right of forward
+    vec3  planetDir = normalize(vec3(0.28, 0.22, 1.0));
     float planetR   = planet_scale;
-
-    // Ring pole direction — defines ring plane normal, tilted ~25° from vertical
-    vec3 poleDir = normalize(vec3(-0.15, 0.85, 0.10));
 
     float cosA  = dot(rd, planetDir);
     float angle = acos(clamp(cosA, -1.0, 1.0));
-    bool  inPlanet = angle < planetR;
 
-    float innerR = planetR * 1.25;
-    float outerR = planetR * 2.1;
+    if (angle >= planetR || rd.y < -0.05) return vec3(0.0);
 
-    // Ring plane intersection
-    bool  hasRingBack  = false;
-    bool  hasRingFront = false;
-    vec3  ringBack  = vec3(0.0);
-    vec3  ringFront = vec3(0.0);
-
-    float ringDenom = dot(rd, poleDir);
-    if (abs(ringDenom) > 0.001) {
-        float ringT   = dot(planetDir, poleDir) / ringDenom;
-        if (ringT > 0.0) {
-            vec3  ringHit  = rd * ringT;
-            float ringDist = length(ringHit - planetDir);
-
-            if (ringDist > innerR && ringDist < outerR) {
-                // Ring is in front of the planet body when the hit is "closer" than the planet center
-                // i.e., ringT * cosA < 1.0 (projection along rd is less than planet center distance)
-                bool isFront = (ringT * cosA < 1.0);
-
-                float t01      = (ringDist - innerR) / (outerR - innerR);
-                float band     = fract(t01 * 5.0);
-                float bandMask = smoothstep(0.3, 0.5, band) * smoothstep(0.9, 0.7, band);
-                vec3  ringCol  = mix(vec3(0.72, 0.32, 0.07), vec3(0.38, 0.14, 0.02), t01);
-                ringCol       *= 0.6 + bandMask * 0.4;
-                float ringEdge = smoothstep(innerR, innerR * 1.08, ringDist) *
-                                 smoothstep(outerR, outerR * 0.94, ringDist);
-                vec3 rc = ringCol * ringEdge;
-
-                if (isFront) { hasRingFront = true; ringFront = rc; }
-                else          { hasRingBack  = true; ringBack  = rc * 0.65; }
-            }
-        }
-    }
-
-    // Early exit if nothing to draw
-    if (!inPlanet && !hasRingFront && !hasRingBack) return vec3(0.0);
-    if (rd.y < -0.05) return vec3(0.0);
-
-    // Disc-space axes for body shading
+    // Disc coordinate axes
     vec3  right  = normalize(cross(vec3(0.0, 1.0, 0.0), planetDir));
     vec3  discUp = normalize(cross(planetDir, right));
     float sinR   = sin(planetR);
-    float dx     = dot(rd, right)  / sinR;
-    float dy     = dot(rd, discUp) / sinR;
+    float dx     = dot(rd, right)  / sinR;   // horizontal on disc (-1..1)
+    float dy     = dot(rd, discUp) / sinR;   // latitude on disc  (-1..1)
+    float r2     = dx * dx + dy * dy;
 
-    vec3 result = vec3(0.0);
+    // Differential rotation — equator moves faster than poles
+    float lon = dx + TIME * 0.022 * (1.0 - dy * dy * 0.55);
 
-    // 1. Back ring (only where planet body is not covering)
-    if (hasRingBack && !inPlanet) result = ringBack;
+    // Band-boundary turbulence — three harmonics at different temporal rates
+    float turb = sin(lon * 3.8 + dy * 2.1)              * 0.44
+               + sin(lon * 7.2 - dy * 5.3)              * 0.22
+               + sin(lon * 1.4 + dy * 8.7 + TIME * 0.004) * 0.12;
 
-    // 2. Planet body
-    if (inPlanet) {
-        float r2      = clamp(dx * dx + dy * dy, 0.0, 1.0);
-        float limb    = 1.0 - r2 * 0.45;  // limb darkening
-        vec3  bodyCol = mix(vec3(0.50, 0.10, 0.02), vec3(0.88, 0.38, 0.07), limb);
-        // Subtle horizontal cloud banding
-        float stripe = sin(dy * 14.0) * 0.5 + 0.5;
-        bodyCol = mix(bodyCol, bodyCol * vec3(0.72, 0.65, 0.50), stripe * 0.22 * (1.0 - r2));
-        float edge = smoothstep(0.0, 0.05, 1.0 - angle / planetR);
-        result = bodyCol * edge * 2.8;
-    }
+    // Main latitude banding — ~9 alternating belts and zones across the disc
+    float bandCoord = dy * 9.5 + turb;
+    float band      = sin(bandCoord * PI);   // smooth -1..1 oscillation
 
-    // 3. Front ring (composited over planet body)
-    if (hasRingFront) result = mix(result, ringFront, 0.88);
+    // Fine-grain detail within each band
+    float fine = sin(dy * 30.0 + lon * 2.4) * 0.18;
 
-    return result;
+    float b = clamp(band * 0.5 + 0.5 + fine * 0.4, 0.0, 1.0);
+
+    // Jupiter colour palette: dark brown belt → warm belt → orange → cream zone
+    vec3 darkBelt = vec3(0.28, 0.13, 0.04);
+    vec3 warmBelt = vec3(0.62, 0.32, 0.11);
+    vec3 orange   = vec3(0.80, 0.50, 0.20);
+    vec3 cream    = vec3(0.91, 0.83, 0.62);
+
+    vec3 colLo   = mix(darkBelt, warmBelt, smoothstep(0.0,  0.35, b));
+    vec3 colHi   = mix(orange,   cream,    smoothstep(0.55, 0.90, b));
+    vec3 bodyCol = mix(colLo,    colHi,    smoothstep(0.30, 0.60, b));
+
+    // Limb darkening — poles dim toward edge
+    bodyCol *= 1.0 - r2 * 0.42;
+
+    // Smooth disc edge
+    float edge = smoothstep(0.0, 0.045, 1.0 - angle / planetR);
+    return bodyCol * edge * 2.6;
 }
 
 // ---- Horizon Mountains (sky element — fixed like moon/stars) ----
