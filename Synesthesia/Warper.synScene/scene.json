@@ -1,5 +1,5 @@
 {
-	"CONTROLS" :
+	"CONTROLS" : 
 	[
 		{
 			"DEFAULT" : 0,
@@ -71,6 +71,13 @@
 	"GPU" : 0,
 	"HEIGHT" : 1080,
 	"IMAGE_PATH" : "default_thumbnail.png",
+	"MEDIA" : 
+	[
+		{
+			"FILTER" : "linear",
+			"WRAP" : "repeat"
+		}
+	],
 	"TITLE" : "Warper",
 	"WIDTH" : 1920
 }
