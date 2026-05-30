@@ -5,7 +5,7 @@
 //  https://www.shadertoy.com/view/mtyGWy
 //  Adapted to 3D spherical sky with Ocean Planet flying camera.
 //  The 4D ray march is replaced by spherical projection of the
-//  ray direction; 8 depth layers give parallax as you fly.
+//  ray direction; 14 depth layers give parallax as you fly.
 // ============================================================
 
 vec4 renderMain() {
@@ -37,23 +37,24 @@ vec4 renderMain() {
     // AA kernel — computed once before the loop from the base az/el coordinates
     vec2 r = vec2(length(fwidth(vec2(az, el))));
 
-    // ---- 8 depth layers ----
-    // j=0 is the closest layer (brightest, most parallax shift, fastest scroll).
-    // j=7 is the farthest (dim, barely shifts, slow scroll).
-    for (float j = 0.0; j < 8.0; j += 1.0) {
+    // ---- 14 depth layers ----
+    // j=0 is the closest layer (brightest, largest, most parallax, fastest scroll).
+    // j=13 is the farthest (dim, tiny, barely shifts, slow scroll).
+    // Four depth cues stack: scroll speed, dot size, brightness, and parallax shift.
+    for (float j = 0.0; j < 14.0; j += 1.0) {
         float depth = j + 1.0;
         float inv_d = 1.0 / depth;
 
-        // Parallax: camera lateral movement shifts closer layers more
-        float az_p = az + cam_x * 0.003 * inv_d;
-        float el_p = el - cam_y * 0.002 * inv_d;
+        // Parallax: closer layers shift much more with lateral camera movement
+        float az_p = az + cam_x * 0.008 * inv_d;
+        float el_p = el - cam_y * 0.005 * inv_d;
 
         // Slight az sub-sample offset per layer — increases visible streak density
         vec2 C = vec2(az_p + j * Y.x / 8.0, el_p);
 
-        // Fall: streaks move toward lower elevation (world-downward meteor shower).
-        // Deeper layers scroll slower — closer ones zip past faster.
-        C.y -= T * (0.3 + inv_d * 0.5);
+        // Fall: strong speed differential — closest layer 5× faster than farthest.
+        // Close streaks zip past; far ones drift. This is the primary depth cue.
+        C.y -= T * (0.2 + inv_d * 0.8);
 
         // Unique random value per (layer, az-cell, el-cell).
         // vec3(float, vec2) constructs vec3(j+1, floor(C/Y).x, floor(C/Y).y) — valid GLSL.
@@ -68,6 +69,10 @@ vec4 renderMain() {
         // col.w oscillates 0-2 and gates overall brightness (streaks pulse in/out).
         vec4 col = 1.0 + sin(T + 7.0 * fract(8663.0 * i) + vec4(0.0, 1.0, 2.0, 4.0));
 
+        // Depth-scaled dot size: close streaks appear physically larger.
+        // j=0: sz*3 (big), j=13: sz*1.07 (tiny)
+        float sz_d = sz * (1.0 + inv_d * 2.0);
+
         // Streak shape (from original):
         //   Shape A — exp(19*P.y) weight:
         //     P.y > 0 → circular distance → glowing round HEAD of streak
@@ -77,9 +82,9 @@ vec4 renderMain() {
         vec2 sdf = vec2(
             length(max(P, vec2(-1.0, 0.0))),  // A: head circle / tail horizontal slice
             length(P)                          // B: dot
-        ) - sz;
+        ) - sz_d;
 
-        float brightness = exp(-j * 0.35);    // attenuate far layers (~8% at j=7)
+        float brightness = exp(-j * 0.4);     // sharp falloff — close layers pop, far ones recede
         O += dot(smoothstep(r, -r, sdf), vec2(exp(19.0 * P.y), 3.0))
              * col * col.w * brightness;
     }
