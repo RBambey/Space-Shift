@@ -80,39 +80,48 @@ vec3 drawPlanet(vec3 rd) {
     float dy     = dot(rd, discUp) / sinR;   // latitude on disc  (-1..1)
     float r2     = dx * dx + dy * dy;
 
-    // Differential rotation — equator moves faster than poles
-    float lon = dx + TIME * 0.022 * (1.0 - dy * dy * 0.55);
+    // Differential rotation — equator faster than poles
+    float lon = dx + TIME * 0.018 * (1.0 - dy * dy * 0.55);
 
-    // Band-boundary turbulence — three harmonics at different temporal rates
-    float turb = sin(lon * 3.8 + dy * 2.1)              * 0.44
-               + sin(lon * 7.2 - dy * 5.3)              * 0.22
-               + sin(lon * 1.4 + dy * 8.7 + TIME * 0.004) * 0.12;
+    // Mild band-boundary turbulence — wavy edges, not dramatic
+    float turb = sin(lon * 4.5  + dy * 3.0)              * 0.14
+               + sin(lon * 9.0  - dy * 5.5)              * 0.06
+               + sin(lon * 1.5  + dy * 7.0 + TIME * 0.003) * 0.04;
 
-    // Main latitude banding — ~9 alternating belts and zones across the disc
-    float bandCoord = dy * 9.5 + turb;
-    float band      = sin(bandCoord * PI);   // smooth -1..1 oscillation
+    // Multi-frequency banding — detuned harmonics give unequal band widths
+    // Fundamental: dy*3.0 → ~6 alternating zones; 5.8 is NOT 2× so beats create variation
+    float b1  = sin((dy * 3.0 + turb) * PI) * 0.58;   // major wide alternation
+    float b2  = sin((dy * 5.8 + turb * 0.7) * PI) * 0.26;  // detuned: breaks regularity
+    float b3  = sin((dy * 9.5 + turb * 0.3) * PI) * 0.08;  // fine grain within bands
+    float sub = sin( dy * 1.4 * PI) * 0.09;            // sub-harmonic: wider equatorial zone
+    float band = clamp((b1 + b2 + b3 + sub) * 0.5 + 0.5, 0.0, 1.0);
 
-    // Fine-grain detail within each band
-    float fine = sin(dy * 30.0 + lon * 2.4) * 0.18;
+    // Jupiter palette — warm tan/cream zones, reddish-brown belts
+    vec3 darkBelt = vec3(0.38, 0.18, 0.07);   // dark reddish-brown belt
+    vec3 midBelt  = vec3(0.58, 0.36, 0.14);   // warm brown
+    vec3 zone     = vec3(0.80, 0.68, 0.48);   // cream/tan zone (NOT white)
 
-    float b = clamp(band * 0.5 + 0.5 + fine * 0.4, 0.0, 1.0);
+    vec3 bodyCol = mix(darkBelt, midBelt, smoothstep(0.0,  0.38, band));
+    bodyCol      = mix(bodyCol,  zone,    smoothstep(0.44, 0.78, band));
 
-    // Jupiter colour palette: dark brown belt → warm belt → orange → cream zone
-    vec3 darkBelt = vec3(0.28, 0.13, 0.04);
-    vec3 warmBelt = vec3(0.62, 0.32, 0.11);
-    vec3 orange   = vec3(0.80, 0.50, 0.20);
-    vec3 cream    = vec3(0.91, 0.83, 0.62);
+    // Subtle cloud micro-texture
+    bodyCol *= 1.0 + sin(dy * 28.0 + lon * 4.8) * 0.04;
 
-    vec3 colLo   = mix(darkBelt, warmBelt, smoothstep(0.0,  0.35, b));
-    vec3 colHi   = mix(orange,   cream,    smoothstep(0.55, 0.90, b));
-    vec3 bodyCol = mix(colLo,    colHi,    smoothstep(0.30, 0.60, b));
+    // Great Red Spot — oval storm, south equatorial belt
+    float grsX = (dx  - 0.22) * 3.8;
+    float grsY = (dy  + 0.27) * 6.5;
+    float grs  = smoothstep(1.3, 0.2, sqrt(grsX * grsX + grsY * grsY));
+    bodyCol    = mix(bodyCol, vec3(0.58, 0.18, 0.06), grs * 0.82);
 
-    // Limb darkening — poles dim toward edge
-    bodyCol *= 1.0 - r2 * 0.42;
+    // Polar hazing — progressively darker toward poles
+    bodyCol *= mix(1.0, 0.50, smoothstep(0.48, 0.92, abs(dy)));
 
-    // Smooth disc edge
+    // Limb darkening
+    bodyCol *= 1.0 - r2 * 0.40;
+
+    // Smooth disc edge — multiplier 2.0 keeps zones warm tan, not blown-out white
     float edge = smoothstep(0.0, 0.045, 1.0 - angle / planetR);
-    return bodyCol * edge * 2.6;
+    return bodyCol * edge * 2.0;
 }
 
 // ---- Horizon Mountains (sky element — fixed like moon/stars) ----
