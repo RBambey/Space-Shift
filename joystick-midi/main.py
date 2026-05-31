@@ -17,7 +17,7 @@ from tkinter import filedialog, messagebox, ttk
 from typing import List, Optional
 
 DT = 0.02          # engine tick interval in seconds
-APP_VERSION = "2.0"
+APP_VERSION = "2.1"
 
 # DSKY / AGC color palette
 _C = {
