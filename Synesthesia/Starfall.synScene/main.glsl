@@ -24,10 +24,12 @@ vec4 renderMain() {
     float az = atan(rd.x, rd.z) * (0.5 / PI);
     float el = asin(clamp(rd.y, -0.9999, 0.9999));
 
-    // ---- Background: deep space ----
-    vec4 O = vec4(0.01, 0.005, 0.02, 0.0);           // dark purple-blue base
-    O.xyz += vec3(0.02, 0.04, 0.10)
-           * pow(max(dot(rd, cFwd), 0.0), 10.0);     // subtle forward glow
+    // ---- Background: deep space (never touched by audio) ----
+    vec3 bg = vec3(0.01, 0.005, 0.02);
+    bg += vec3(0.02, 0.04, 0.10) * pow(max(dot(rd, cFwd), 0.0), 10.0);
+
+    // ---- Streak accumulator (audio applied here only) ----
+    vec4 O = vec4(0.0);
 
     // ---- Streak parameters (from original shader) ----
     float T  = starfall_time;        // accumulated time × fall_speed (from script.js)
@@ -89,12 +91,11 @@ vec4 renderMain() {
              * col * col.w * brightness;
     }
 
-    // ---- Bass reactivity ----
-    O.xyz *= 1.0 + syn_BassHits * bass_reactivity * 0.5;   // hit pulse
-    O.xyz += vec3(0.005, 0.01, 0.02) * syn_BassLevel * bass_reactivity; // sustained glow
+    // ---- Bass reactivity — streaks only, background unaffected ----
+    O.xyz *= 1.0 + syn_BassHits  * bass_reactivity * 2.0;  // hit: flash bright
+    O.xyz *= 1.0 + syn_BassLevel * bass_reactivity * 1.0;  // sustained: raise glow level
 
-    // ---- Tonemap: sqrt(tanh(O − bias)) from original ----
-    // Clamp before sqrt to avoid NaN on dark pixels where O < bias.
+    // ---- Combine background + lit streaks, then tonemap ----
     vec3 bias = vec3(0.04, 0.08, 0.02);
-    return vec4(sqrt(max(tanh(O.xyz - bias), vec3(0.0))), 1.0);
+    return vec4(sqrt(max(tanh(bg + O.xyz - bias), vec3(0.0))), 1.0);
 }
