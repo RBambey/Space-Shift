@@ -204,7 +204,42 @@ class MidiEngine:
         self._osc_in_ref = None  # set by MapperApp to enable direct WORLD updates
 
     def get_midi_ports(self) -> List[str]:
-        return self._midi_out.get_ports()
+        """Enumerate MIDI ports in a subprocess to insulate from CoreMIDI crashes on macOS 26+.
+
+        macOS 26.5 has a bug in MIDIObjectGetStringProperty (CoreMIDI XPC path) that causes
+        memory corruption when rtmidi calls getPortName() during port enumeration.  Running
+        the enumeration in a child process means a crash there cannot kill the main app.
+        If no suitable Python interpreter is found (frozen app without system Python), falls
+        back to a direct call inside a try/except as a last resort.
+        """
+        import subprocess, json, sys, shutil
+        code = (
+            "import rtmidi, json\n"
+            "try:\n"
+            "    print(json.dumps(rtmidi.MidiOut().get_ports()))\n"
+            "except Exception:\n"
+            "    print('[]')\n"
+        )
+        # When frozen by PyInstaller sys.executable is the app bundle, not the interpreter.
+        # Try to locate a usable Python from PATH in that case.
+        if getattr(sys, 'frozen', False):
+            python_exe = shutil.which("python3") or shutil.which("python")
+        else:
+            python_exe = sys.executable
+        if python_exe:
+            try:
+                result = subprocess.run(
+                    [python_exe, "-c", code],
+                    capture_output=True, text=True, timeout=5
+                )
+                return json.loads(result.stdout.strip() or "[]")
+            except Exception:
+                pass
+        # Last resort: direct call (may crash on macOS 26.5 — but better than no ports at all)
+        try:
+            return self._midi_out.get_ports()
+        except Exception:
+            return []
 
     def open_port(self, index: int):
         if self._midi_out.is_port_open():
@@ -892,12 +927,12 @@ class MidiActivityWindow(tk.Toplevel):
         scroll = tk.Scrollbar(frame, orient="vertical",
                               bg=_C["btn_bg"], troughcolor=_C["bg"],
                               activebackground=_C["fg"])
-        self._lb = tk.Listbox(
+        self._lb = tk.Text(
             frame, yscrollcommand=scroll.set,
-            font=("Courier", 10), activestyle="none",
+            font=("Courier", 10), wrap="none",
             bg=_C["bg_disp"], fg=_C["fg"],
-            selectbackground=_C["sel_bg"], selectforeground=_C["fg"],
-            bd=0, highlightthickness=0)
+            bd=0, highlightthickness=0,
+            state="disabled", cursor="arrow")
         scroll.config(command=self._lb.yview)
         self._lb.pack(side="left", fill="both", expand=True)
         scroll.pack(side="right", fill="y")
@@ -907,14 +942,19 @@ class MidiActivityWindow(tk.Toplevel):
 
     def append_entries(self, entries: list):
         for e in entries:
-            self._lb.insert(tk.END, "  " + e)
-            if self._lb.size() > MAX_LOG_ENTRIES:
-                self._lb.delete(0)
+            self._lb.configure(state="normal")
+            self._lb.insert(tk.END, "  " + e + "\n")
+            lines = int(float(self._lb.index("end-1c")))
+            if lines > MAX_LOG_ENTRIES:
+                self._lb.delete("1.0", "2.0")
+            self._lb.configure(state="disabled")
         if entries:
             self._lb.see(tk.END)
 
     def _clear(self):
-        self._lb.delete(0, tk.END)
+        self._lb.configure(state="normal")
+        self._lb.delete("1.0", tk.END)
+        self._lb.configure(state="disabled")
 
 
 # ---------------------------------------------------------------------------
@@ -1519,12 +1559,24 @@ class MapperApp(tk.Tk):
         scrollbar = tk.Scrollbar(list_frame, orient="vertical",
                                 bg=_C["btn_bg"], troughcolor=_C["bg"],
                                 activebackground=_C["fg"])
-        self._listbox = tk.Listbox(list_frame, yscrollcommand=scrollbar.set,
-                                   font=("Courier", 12), activestyle="none",
-                                   bg=_C["bg_disp"], fg=_C["fg"],
-                                   selectbackground=_C["sel_bg"],
-                                   selectforeground=_C["fg"],
-                                   bd=0, highlightthickness=0)
+        # Use Treeview instead of Listbox — Listbox crashes on macOS 26+ (Core Text bug)
+        _ts = ttk.Style()
+        _ts.theme_use("clam")
+        _ts.configure("Map.Treeview",
+            background=_C["bg_disp"], foreground=_C["fg"],
+            fieldbackground=_C["bg_disp"], rowheight=22,
+            font=("Courier", 12), borderwidth=0)
+        _ts.configure("Map.Treeview.Heading",
+            background=_C["bg"], foreground=_C["fg_dim"])
+        _ts.map("Map.Treeview",
+            background=[("selected", _C["sel_bg"])],
+            foreground=[("selected", _C["fg"])])
+        self._listbox = ttk.Treeview(list_frame, yscrollcommand=scrollbar.set,
+                                     style="Map.Treeview", columns=("label",),
+                                     show="tree", selectmode="browse")
+        self._listbox.column("#0", width=0, stretch=False)
+        self._listbox.column("label", stretch=True)
+        self._listbox.tag_configure("dim", foreground=_C["fg_dim"])
         scrollbar.config(command=self._listbox.yview)
         self._listbox.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
@@ -2026,11 +2078,12 @@ class MapperApp(tk.Tk):
     # -----------------------------------------------------------------------
 
     def _refresh_listbox(self):
-        self._listbox.delete(0, tk.END)
+        for item in self._listbox.get_children():
+            self._listbox.delete(item)
         for i, m in enumerate(self._mappings):
-            self._listbox.insert(tk.END, "  " + m.label())
-            if not m.enabled:
-                self._listbox.itemconfig(i, fg=_C["fg_dim"])
+            tags = ("dim",) if not m.enabled else ()
+            self._listbox.insert("", tk.END, iid=str(i),
+                                 values=("  " + m.label(),), tags=tags)
 
     def _add_mapping(self):
         dlg = MappingDialog(self, self._all_joysticks, default_ctrl=self._ctrl_idx)
@@ -2042,11 +2095,11 @@ class MapperApp(tk.Tk):
             self._autosave()
 
     def _edit_mapping(self):
-        sel = self._listbox.curselection()
+        sel = self._listbox.selection()
         if not sel:
             messagebox.showinfo("Edit", "Select a mapping to edit.", parent=self)
             return
-        idx = sel[0]
+        idx = int(sel[0])
         dlg = MappingDialog(self, self._all_joysticks,
                             default_ctrl=self._mappings[idx].controller_index,
                             entry=self._mappings[idx])
@@ -2058,27 +2111,27 @@ class MapperApp(tk.Tk):
             self._autosave()
 
     def _delete_mapping(self):
-        sel = self._listbox.curselection()
+        sel = self._listbox.selection()
         if not sel:
             messagebox.showinfo("Delete", "Select a mapping to delete.", parent=self)
             return
-        idx = sel[0]
+        idx = int(sel[0])
         self._mappings.pop(idx)
         self._push_mappings()
         self._refresh_listbox()
         self._autosave()
 
     def _toggle_mapping_enabled(self):
-        sel = self._listbox.curselection()
+        sel = self._listbox.selection()
         if not sel:
             messagebox.showinfo("Pause", "Select a mapping to pause/resume.", parent=self)
             return
-        idx = sel[0]
+        idx = int(sel[0])
         m = self._mappings[idx]
         self._mappings[idx] = MappingEntry(**{**asdict(m), "enabled": not m.enabled})
         self._push_mappings()
         self._refresh_listbox()
-        self._listbox.selection_set(idx)
+        self._listbox.selection_set(str(idx))
         self._autosave()
 
     def _push_mappings(self):
