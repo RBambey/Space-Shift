@@ -1,0 +1,112 @@
+{
+	"CONTROLS" :
+	[
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "Trigger a complete barrel roll.",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "barrel_roll",
+			"TYPE" : "bang",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "Smoothly return to level flight.",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "recenter",
+			"TYPE" : "bang",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 20,
+			"DESCRIPTION" : "Forward speed (units/s).",
+			"MAX" : 60,
+			"MIN" : 5,
+			"NAME" : "fly_speed",
+			"TYPE" : "slider",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "Nose up/down.",
+			"MAX" : 1,
+			"MIN" : -1,
+			"NAME" : "pitch",
+			"TYPE" : "slider",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "Roll left/right.",
+			"MAX" : 1,
+			"MIN" : -1,
+			"NAME" : "roll_rate",
+			"TYPE" : "slider",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "Rudder left/right. Stacks with banking.",
+			"MAX" : 1,
+			"MIN" : -1,
+			"NAME" : "yaw_rate",
+			"TYPE" : "slider",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 300,
+			"DESCRIPTION" : "Visibility depth down the canyon.",
+			"MAX" : 500,
+			"MIN" : 50,
+			"NAME" : "draw_distance",
+			"TYPE" : "slider",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 60,
+			"DESCRIPTION" : "Average canyon width.",
+			"MAX" : 200,
+			"MIN" : 10,
+			"NAME" : "canyon_width",
+			"PARAMS" : 0.05,
+			"TYPE" : "slider smooth",
+			"UI_GROUP" : "Visual"
+		},
+		{
+			"DEFAULT" : 0.33,
+			"DESCRIPTION" : "Wireframe line color (hue: 0=red, 0.33=green, 0.67=blue).",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "wire_hue",
+			"PARAMS" : 0.05,
+			"TYPE" : "knob smooth",
+			"UI_GROUP" : "Visual"
+		},
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "Background color (0 = black, >0 = dim hue cycles through spectrum).",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "bg_color",
+			"PARAMS" : 0.05,
+			"TYPE" : "slider smooth",
+			"UI_GROUP" : "Visual"
+		}
+	],
+	"CREDIT" : "RBambey",
+	"DESCRIPTION" : "Wireframe Grand Canyon fly-through. Towering walls, gentle turns and forks. Green on black by default.",
+	"GPU" : 0,
+	"HEIGHT" : 1080,
+	"IMAGE_PATH" : "default_thumbnail.png",
+	"MEDIA" :
+	[
+		{
+			"FILTER" : "linear",
+			"WRAP" : "repeat"
+		}
+	],
+	"TITLE" : "Wireframe",
+	"WIDTH" : 1920
+}
