@@ -113,7 +113,7 @@ vec2 mp(vec3 p) {
     t = t.x < h.x ? t : h;
 
     // Rocky ground — evaluated in world space (np) so it lies flat regardless of cell
-    float gnd = np.y + 8.0 - rockDisp(np.xz * 0.5);
+    float gnd = np.y + 8.0 - rockDisp(np.xz * 0.5) * terrain_hilliness;
     t = t.x < gnd ? t : vec2(gnd, 2.0);
 
     t.x *= 0.7;

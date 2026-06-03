@@ -96,7 +96,17 @@
 			"UI_GROUP" : "Audio"
 		},
 		{
-			"DEFAULT" : 120.0,
+			"DEFAULT" : 1.0,
+			"DESCRIPTION" : "Height multiplier for the rocky ground — 0 = flat, 1 = default, higher = taller jagged peaks.",
+			"MAX" : 5.0,
+			"MIN" : 0.0,
+			"NAME" : "terrain_hilliness",
+			"PARAMS" : 0.05,
+			"TYPE" : "slider smooth",
+			"UI_GROUP" : "Visual"
+		},
+		{
+			"DEFAULT" : 205.0,
 			"DESCRIPTION" : "How far the renderer looks — lower values improve performance, higher values show more distant monsters.",
 			"MAX" : 400.0,
 			"MIN" : 30.0,
