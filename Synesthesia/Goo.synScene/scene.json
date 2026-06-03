@@ -76,11 +76,31 @@
 			"UI_GROUP" : "Visual"
 		},
 		{
-			"DEFAULT" : 0.5,
+			"DEFAULT" : 7.0,
+			"DESCRIPTION" : "Controls how quickly distant blobs fade to black. Lower = clearer distance, higher = heavier fog.",
+			"MAX" : 10.0,
+			"MIN" : 0.0,
+			"NAME" : "fog_density",
+			"PARAMS" : 0.1,
+			"TYPE" : "slider smooth",
+			"UI_GROUP" : "Visual"
+		},
+		{
+			"DEFAULT" : 0.2,
 			"DESCRIPTION" : "Strength of brightness pulse on bass hits.",
 			"MAX" : 1.0,
 			"MIN" : 0.0,
 			"NAME" : "bass_reactivity",
+			"PARAMS" : 0.05,
+			"TYPE" : "slider smooth",
+			"UI_GROUP" : "Audio"
+		},
+		{
+			"DEFAULT" : 0.3,
+			"DESCRIPTION" : "Strength of water-ripple effect on the goo surface triggered by bass hits.",
+			"MAX" : 1.0,
+			"MIN" : 0.0,
+			"NAME" : "bass_ripple",
 			"PARAMS" : 0.05,
 			"TYPE" : "slider smooth",
 			"UI_GROUP" : "Audio"

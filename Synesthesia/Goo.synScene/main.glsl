@@ -13,16 +13,16 @@
 
 const float FOV               = 0.4;
 const float MarchDumping      = 0.7579;
-const float Far               = 38.925;
+const float Far               = 80.0;
 const int   MaxSteps          = 128;
 const float TunnelSmoothFactor = 2.0;
-const float TunnelRadius      = 0.85660005;
+const float TunnelRadius      = 2.0;
 const float TunnelFreqA       = 0.18003;
 const float TunnelFreqB       = 0.25;
 const float TunnelAmpA        = 3.6230998;
 const float TunnelAmpB        = 2.4324;
 const float NoiseIsoline      = 0.319;
-const float NoiseScale        = 2.9980001;
+const float NoiseScale        = 3.0;
 const vec3  Color             = vec3(0.085, 0.658, 1.0);
 
 #define M_NONE -1.0
@@ -74,6 +74,8 @@ vec2 map(vec3 p) {
     float d  = noiseDist(p);
     float d2 = length(p.xy - path(p.z)) - TunnelRadius;
     d = smax(d, -d2, TunnelSmoothFactor);
+    float _rw = sin(length(p) * 6.0 - TIME * 7.0);
+    d += sign(_rw) * pow(abs(_rw), 0.35) * 0.10 * syn_BassLevel * bass_ripple;
     return vec2(d, M_NOISE);
 }
 
@@ -163,7 +165,7 @@ vec3 render(vec3 ro, vec3 rd) {
         brdf += 0.40 * fre * vec3(1.00, 1.00, 1.00) * occ;
 
         col = col * brdf;
-        col = mix(col, vec3(0.0), 1.0 - exp(-0.005 * t * t));
+        col = mix(col, vec3(0.0), 1.0 - exp(-fog_density * 0.001 * t * t));
     } else {
         // No geometry hit — show the goo surface colour rather than black
         col = Color + 0.3 * sin(vec3(0.15, 0.02, 0.10) * TIME * 6.0 * colour_speed);
