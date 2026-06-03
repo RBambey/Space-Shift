@@ -1,4 +1,4 @@
-// Wireframe — Canyon flight physics  v1.2
+// Wireframe — Canyon flight physics  v2.0
 // Camera module copied from Ocean Planet (RBambey).
 
 var cam = (function(opts) {
@@ -208,6 +208,13 @@ function halfWidthJS(z) {
         (1.0 + 0.12 * Math.sin(z * 0.031) + 0.08 * Math.cos(z * 0.057 + 2.0));
 }
 
+// Wall protrusion margin — mirrors wallVar() max amplitude in main.glsl.
+// Scales with sqrt(canyon_width/60) exactly as the GLSL does, so the
+// collision boundary stays just outside the actual bumpy wall surface.
+function wallMargin() {
+    return Math.sqrt(canyon_width / 60.0) * 2.65 + 1.0;
+}
+
 function setup() {
     cam.setup();
 }
@@ -219,7 +226,7 @@ function update(dt) {
         { recenterY:  function(x, z) { return floorHeight(x, z) + 5.0; },
           altMin:     function(x, z) { return floorHeight(x, z) + 1.5; },
           altMax:     function(x, z) { return floorHeight(x, z) + 65.0; },
-          wallLeft:   function(x, z) { return pathCenter(z) - halfWidthJS(z) + 1.0; },
-          wallRight:  function(x, z) { return pathCenter(z) + halfWidthJS(z) - 1.0; } }
+          wallLeft:   function(x, z) { return pathCenter(z) - halfWidthJS(z) + wallMargin(); },
+          wallRight:  function(x, z) { return pathCenter(z) + halfWidthJS(z) - wallMargin(); } }
     );
 }

@@ -75,6 +75,16 @@
 			"UI_GROUP" : "Visual"
 		},
 		{
+			"DEFAULT" : 10,
+			"DESCRIPTION" : "Polygon facet size — larger = chunkier low-poly retro, smaller = finer mesh.",
+			"MAX" : 18,
+			"MIN" : 3,
+			"NAME" : "poly_size",
+			"PARAMS" : 0.1,
+			"TYPE" : "slider smooth",
+			"UI_GROUP" : "Visual"
+		},
+		{
 			"DEFAULT" : 0.33,
 			"DESCRIPTION" : "Wireframe line color (hue: 0=red, 0.33=green, 0.67=blue).",
 			"MAX" : 1,
@@ -96,7 +106,7 @@
 		},
 		{
 			"DEFAULT" : 0.5,
-			"DESCRIPTION" : "How strongly bass pulses wireframe brightness and glow.",
+			"DESCRIPTION" : "How strongly bass pulses edge glow and drives the ripple wave.",
 			"MAX" : 1,
 			"MIN" : 0,
 			"NAME" : "bass_reactivity",
@@ -106,7 +116,7 @@
 		}
 	],
 	"CREDIT" : "RBambey",
-	"DESCRIPTION" : "Wireframe Grand Canyon fly-through. Towering walls, gentle turns and forks. Green on black by default.",
+	"DESCRIPTION" : "Low-poly canyon fly-through. Towering walls rendered as triangulated polygon edges — geometric facets like early computer wireframe graphics. Wall protrusions, layered strata, and bass ripple waves.",
 	"GPU" : 0,
 	"HEIGHT" : 1080,
 	"IMAGE_PATH" : "default_thumbnail.png",
