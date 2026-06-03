@@ -1,10 +1,11 @@
 // ============================================================
-//  WIREFRAME — v1.1
+//  WIREFRAME — v1.2
 //  Created by RBambey
 //  Grand Canyon wireframe fly-through with Ocean Planet camera.
 //  SDF canyon (floor + two walls + fork pillar) rendered as a
 //  fwidth()-antialiased world-space grid with glow halos.
 //  v1.1: bumpy terrain floor, terrain collision, bass reactivity.
+//  v1.2: path amplitudes scale with canyon_width; wall sliding collision.
 // ============================================================
 
 // ---- Hue → saturated RGB (HSV S=1 V=1) ----
@@ -14,13 +15,16 @@ vec3 hue2rgb(float h) {
 
 // ---- Canyon path: 4-frequency sine, all zero at z=0 ----
 // Frequencies are ~golden-ratio spaced to avoid repetition.
+// Amplitudes scale with canyon_width so turns always fit inside the walls.
+// amp = canyon_width/200 → max deviation ≈ 62% of halfWidth at any width.
 vec2 path(float z) {
-    float s = 0.018;
+    float s   = 0.018;
+    float amp = canyon_width / 200.0;
     return vec2(
-        sin(z * s)        * 30.0 +
-        sin(z * s * 1.37) * 18.0 +
-        sin(z * s * 2.61) *  8.0 +
-        sin(z * s * 4.07) *  3.0,
+        (sin(z * s)        * 30.0 +
+         sin(z * s * 1.37) * 18.0 +
+         sin(z * s * 2.61) *  8.0 +
+         sin(z * s * 4.07) *  3.0) * amp,
         0.0
     );
 }
