@@ -116,7 +116,7 @@
 			"UI_GROUP" : "Visual"
 		},
 		{
-			"DEFAULT" : -15.0,
+			"DEFAULT" : -6.0,
 			"DESCRIPTION" : "Minimum flight altitude (floor).",
 			"MAX" : 10.0,
 			"MIN" : -30.0,
