@@ -96,7 +96,7 @@
 			"UI_GROUP" : "Audio"
 		},
 		{
-			"DEFAULT" : 1.0,
+			"DEFAULT" : 1.5,
 			"DESCRIPTION" : "Height multiplier for the rocky ground — 0 = flat, 1 = default, higher = taller jagged peaks.",
 			"MAX" : 5.0,
 			"MIN" : 0.0,

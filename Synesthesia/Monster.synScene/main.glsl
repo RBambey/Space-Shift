@@ -195,7 +195,7 @@ vec4 renderMain() {
     // Combine surface + blue glow (terrain orbs) + red glow (pulsing core)
     float beat = pow(syn_BassLevel, 2.0) * beat_strength;
     vec3 col = co + gB * (0.5 + beat * 1.5) * vec3(0.1, 0.3, 1.0)
-                  + gR * (0.4 + beat * 1.2) * vec3(1.0, 0.2, 0.1);
+                  + gR * (1.0 + beat * 5.0) * vec3(1.0, 0.2, 0.1);
     col = pow(max(col, vec3(0.0)), vec3(0.45));
 
     col *= 1.0 + syn_BassLevel * bass_reactivity * 0.5;

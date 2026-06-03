@@ -6,7 +6,7 @@ var cam = (function(opts) {
     opts = opts || {};
 
     var camX = opts.startX != null ? opts.startX : 0.0;
-    var camY = opts.startY != null ? opts.startY : -4.0;
+    var camY = opts.startY != null ? opts.startY : -5.0;
     var camZ = opts.startZ != null ? opts.startZ : 0.0;
 
     // ~13° downward pitch to center the monster at (55, ~-6, 55) from starting position
@@ -168,7 +168,7 @@ var cam = (function(opts) {
     function getPos() { return { x: camX, y: camY, z: camZ }; }
 
     return { setup: setup, update: update, getPos: getPos, pushUniforms: pushUniforms };
-})({ startX: 55.0, startY: 8.0, startZ: -5.0 });
+})({ startX: 55.0, startY: 5.0, startZ: -5.0 });
 
 function setup() {
     cam.setup();
