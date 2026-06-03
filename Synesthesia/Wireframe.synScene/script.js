@@ -170,6 +170,14 @@ var cam = (function(opts) {
     return { setup: setup, update: update, getPos: getPos, pushUniforms: pushUniforms };
 })({ startY: 5.0 });
 
+// Canyon floor height — mirrors floorHeight() in main.glsl exactly.
+// Used by altMin/altMax to keep camera above terrain.
+function floorHeight(x, z) {
+    return Math.sin(x * 0.08 + z * 0.05)         * 2.5
+         + Math.sin(x * 0.17 + z * 0.12 + 1.7)   * 1.5
+         + Math.cos(x * 0.29 + z * 0.21 + 3.1)   * 0.7;
+}
+
 function setup() {
     cam.setup();
 }
@@ -178,8 +186,8 @@ function update(dt) {
     cam.update(dt,
         { pitch: pitch, roll_rate: roll_rate, yaw_rate: yaw_rate,
           barrel_roll: barrel_roll, fly_speed: fly_speed, recenter: recenter },
-        { recenterY: function() { return 5.0; },
-          altMin:    function() { return 1.5; },
-          altMax:    function() { return 70.0; } }
+        { recenterY: function(x, z) { return floorHeight(x, z) + 5.0; },
+          altMin:    function(x, z) { return floorHeight(x, z) + 1.5; },
+          altMax:    function(x, z) { return floorHeight(x, z) + 65.0; } }
     );
 }

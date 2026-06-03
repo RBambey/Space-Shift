@@ -1,9 +1,10 @@
 // ============================================================
-//  WIREFRAME — v1.0
+//  WIREFRAME — v1.1
 //  Created by RBambey
 //  Grand Canyon wireframe fly-through with Ocean Planet camera.
 //  SDF canyon (floor + two walls + fork pillar) rendered as a
 //  fwidth()-antialiased world-space grid with glow halos.
+//  v1.1: bumpy terrain floor, terrain collision, bass reactivity.
 // ============================================================
 
 // ---- Hue → saturated RGB (HSV S=1 V=1) ----
@@ -30,6 +31,15 @@ float halfWidth(float z) {
         (1.0 + 0.12 * sin(z * 0.031) + 0.08 * cos(z * 0.057 + 2.0));
 }
 
+// ---- Canyon floor height (world-space undulation) ----
+// 3-frequency sine/cos. Mirrored exactly in script.js floorHeight().
+// Max ∇h ≈ 0.80 → SDF Lipschitz ≈ 1.28; step multiplier 0.75 keeps march safe.
+float floorHeight(vec2 xz) {
+    return sin(xz.x * 0.08 + xz.y * 0.05)         * 2.5
+         + sin(xz.x * 0.17 + xz.y * 0.12 + 1.7)   * 1.5
+         + cos(xz.x * 0.29 + xz.y * 0.21 + 3.1)   * 0.7;
+}
+
 // ---- Scene SDF ----
 // Convention: positive = air (keep marching), near-zero = surface, negative = solid.
 float scene(vec3 p) {
@@ -39,7 +49,7 @@ float scene(vec3 p) {
 
     float dL  =  px + hw;            // distance inside left wall  (+ = inside canyon)
     float dR  = -px + hw;            // distance inside right wall (+ = inside canyon)
-    float dF  = p.y;                 // distance above floor (floor at y=0)
+    float dF  = p.y - floorHeight(p.xz);   // distance above terrain floor
 
     // Fork pillar: central rock island, present for ~240 of every 600 units.
     // +200 offset ensures no pillar right at the starting position.
@@ -52,12 +62,14 @@ float scene(vec3 p) {
 }
 
 // ---- Wire-glow: sharp core + exponential halo, fwidth()-antialiased ----
+// Bass hits expand the halo radius — shockwave effect through the grid.
 float wireGlow(float coord, float spacing) {
     float f    = fract(coord / spacing);
-    float fw   = min(fwidth(coord / spacing) * 1.5, 0.4); // clamp width at grazing angles
+    float fw   = min(fwidth(coord / spacing) * 1.5, 0.4); // clamp at grazing angles
     float d    = min(f, 1.0 - f);
     float core = 1.0 - smoothstep(fw * 0.8, fw * 2.5, d);
-    float halo = exp(-d / max(fw * 6.0, 0.015)) * 0.28;
+    float hr   = fw * (6.0 + syn_BassHits * bass_reactivity * 10.0);
+    float halo = exp(-d / max(hr, 0.015)) * 0.28;
     return core + halo;
 }
 
@@ -102,7 +114,7 @@ vec4 renderMain() {
         float d = scene(p);
         if (d < 0.02)                     { hit = true; break; }
         if (d < 0.0 || t > draw_distance) break;
-        t += max(d * 0.85, 0.01);
+        t += max(d * 0.75, 0.01);  // 0.75 × Lipschitz(1.28) = 0.96 < 1 — safe with bumpy floor
     }
 
     if (!hit) return vec4(bgCol, 1.0);
@@ -113,6 +125,10 @@ vec4 renderMain() {
     float fog  = exp(-t * 0.006);           // depth cue: distant lines grow dim
     vec3  wCol = hue2rgb(wire_hue);
     vec3  col  = mix(bgCol, wCol * clamp(w, 0.0, 1.5), fog);
+
+    // ---- Audio: bass hits flash wireframe; sustained bass elevates glow ----
+    col *= 1.0 + syn_BassHits  * bass_reactivity * 1.5
+               + syn_BassLevel * bass_reactivity * 0.6;
 
     return vec4(col, 1.0);
 }

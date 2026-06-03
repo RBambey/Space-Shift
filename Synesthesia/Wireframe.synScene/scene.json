@@ -93,6 +93,16 @@
 			"PARAMS" : 0.05,
 			"TYPE" : "slider smooth",
 			"UI_GROUP" : "Visual"
+		},
+		{
+			"DEFAULT" : 0.5,
+			"DESCRIPTION" : "How strongly bass pulses wireframe brightness and glow.",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "bass_reactivity",
+			"PARAMS" : 0.1,
+			"TYPE" : "slider smooth",
+			"UI_GROUP" : "Audio"
 		}
 	],
 	"CREDIT" : "RBambey",
