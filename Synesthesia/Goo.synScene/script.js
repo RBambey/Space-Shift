@@ -162,7 +162,7 @@ var cam = (function(opts) {
     function getPos() { return { x: camX, y: camY, z: camZ }; }
 
     return { setup: setup, update: update, getPos: getPos, pushUniforms: pushUniforms };
-})({ startX: 1.0, startY: 2.4324, startZ: 5.0 });
+})({ startX: 1.0, startY: 1.2324, startZ: 5.0 });
 
 function setup() {
     cam.setup();
