@@ -11,11 +11,11 @@ var cam = (function(opts) {
 
     var camX = opts.startX != null ? opts.startX : 0.0;
     var camY = opts.startY != null ? opts.startY : 0.0;
-    var camZ = opts.startZ != null ? opts.startZ : -3.0;
+    var camZ = opts.startZ != null ? opts.startZ : -3000.0;
 
-    var camRight = [1, 0, 0];
+    var camRight = [-1, 0, 0];
     var camUp    = [0, 1, 0];
-    var camFwd   = [0, 0, 1];
+    var camFwd   = [0, 0, -1];
 
     var rollIdleTime     = 0.0;
     var pitchIdleTime    = 0.0;
@@ -163,7 +163,7 @@ var cam = (function(opts) {
     function getPos() { return { x: camX, y: camY, z: camZ }; }
 
     return { setup: setup, update: update, getPos: getPos, pushUniforms: pushUniforms };
-})({ startX: -1.5, startY: 0.0, startZ: -3.0 });
+})({ startX: -1.5, startY: 0.0, startZ: -20.0 });
 
 function setup() {
     cam.setup();
