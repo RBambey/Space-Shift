@@ -10,8 +10,9 @@
 //  Temporal accumulation smooths edges between frames.
 // ============================================================
 
-#define SCALE     2.8
-#define MINRAD2   0.25
+#define SCALE       2.8
+#define MINRAD2     0.25
+#define WORLD_SCALE 0.55  // < 1 zooms into the fractal — wider tunnels, more open spaces
 
 float minRad2                 = clamp(MINRAD2, 1.0e-9, 1.0);
 float absScalem1              = abs(SCALE - 1.0);
@@ -19,14 +20,15 @@ float AbsScaleRaisedTo1mIters = pow(abs(SCALE), float(1 - 10));
 vec4  mboxScale               = vec4(SCALE, SCALE, SCALE, abs(SCALE)) / minRad2;
 
 vec3 tile(vec3 pos) {
-    return mod(pos + 3.5, 7.0) - 3.5;
+    return mod(pos * WORLD_SCALE + 3.5, 7.0) - 3.5;
 }
 
 vec3 surfaceCol1 = vec3(0.80, 0.00, 0.00);  // deep red base
 vec3 surfaceCol2 = vec3(0.40, 0.40, 0.50);  // grey-blue mid
 vec3 surfaceCol3 = vec3(0.50, 0.30, 0.00);  // amber edge
 
-const vec3 SUN_DIR = normalize(vec3(0.35, 0.10, 0.30));
+const vec3 SUN_DIR  = normalize(vec3( 0.35,  0.10,  0.30));
+const vec3 SUN_DIR2 = normalize(vec3(-0.35, -0.10, -0.30));  // opposite fill light
 
 // ---- Procedural 3D noise ----
 
@@ -58,7 +60,7 @@ float Map(vec3 pos) {
         p     *= clamp(max(minRad2 / r2, minRad2), 0.0, 1.0);
         p      = p * mboxScale + p0;
     }
-    return (length(p.xyz) - absScalem1) / p.w - AbsScaleRaisedTo1mIters;
+    return ((length(p.xyz) - absScalem1) / p.w - AbsScaleRaisedTo1mIters) / WORLD_SCALE;
 }
 
 // ---- Surface colour (orbit trap, 5 iterations) ----
@@ -184,15 +186,17 @@ vec3 renderColour(vec3 p, vec2 ret, vec3 rd, vec3 spotLight) {
 
     float shaSpot = Shadow(p, spot);
     float shaSun  = Shadow(p, SUN_DIR);
-    float bri     = max(dot(spot,    nor), 0.0) / pow(atten, 1.5) * 0.45;
-    float briSun  = max(dot(SUN_DIR, nor), 0.0) * 0.40;
+    float bri     = max(dot(spot,     nor), 0.0) / pow(atten, 1.5) * 0.45;
+    float briSun  = max(dot(SUN_DIR,  nor), 0.0) * 0.40;
+    float briSun2 = max(dot(SUN_DIR2, nor), 0.0) * 0.12;  // fill — no shadow
 
     vec3 surf = Colour(p);
-    vec3 col  = surf * bri * shaSpot + surf * briSun * shaSun;
+    vec3 col  = surf * bri * shaSpot + surf * briSun * shaSun + surf * briSun2;
 
     vec3 ref = reflect(rd, nor);
-    col += pow(max(dot(spot,    ref), 0.0), 10.0) * 4.0 * shaSpot * bri;
-    col += pow(max(dot(SUN_DIR, ref), 0.0), 10.0) * 4.0 * shaSun  * briSun;
+    col += pow(max(dot(spot,     ref), 0.0), 10.0) * 4.0 * shaSpot * bri;
+    col += pow(max(dot(SUN_DIR,  ref), 0.0), 10.0) * 4.0 * shaSun  * briSun;
+    col += pow(max(dot(SUN_DIR2, ref), 0.0), 10.0) * 4.0 * briSun2;
 
     col *= 1.0 + syn_BassLevel * bass_reactivity * 0.5;
     return col;
