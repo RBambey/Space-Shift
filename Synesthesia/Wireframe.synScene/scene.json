@@ -85,8 +85,8 @@
 			"UI_GROUP" : "Visual"
 		},
 		{
-			"DEFAULT" : 0.33,
-			"DESCRIPTION" : "Wireframe line color (hue: 0=red, 0.33=green, 0.67=blue).",
+			"DEFAULT" : 0.67,
+			"DESCRIPTION" : "Wireframe line color (hue: 0=red, 0.33=blue, 0.67=green).",
 			"MAX" : 1,
 			"MIN" : 0,
 			"NAME" : "wire_hue",

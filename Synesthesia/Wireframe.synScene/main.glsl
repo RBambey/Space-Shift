@@ -1,24 +1,24 @@
 // ============================================================
-//  WIREFRAME — v2.0
+//  WIREFRAME — v3.0
 //  Created by RBambey
-//  Low-poly canyon fly-through — triangulated polygon edge glow
-//  on a black background.  Walls have independent protrusions and
-//  UV-skewed strata tilt for a sloped-facet look.  Bass ripple
-//  wave identical to Flying Synth.
+//  True low-poly facets: each triangle uses actual 3D tessellated
+//  vertex positions (floor height field, wall surface with path
+//  curve + protrusions).  Flat normal per face drives dim shading
+//  so each polygon is visually distinct.  Edges glow at the actual
+//  3D mesh boundaries, not a UV-space grid overlay.
 //  v1.1: bumpy floor, terrain collision, bass reactivity.
 //  v1.2: path scales with canyon_width; wall sliding collision.
-//  v2.0: faceted polygon edges; wall protrusions + strata tilt;
-//        bass ripple ring wave.
+//  v2.0: polygon edges; wall protrusions; bass ripple wave.
+//  v3.0: 3D tessellated vertices; flat-face shading; green default.
 // ============================================================
 
 // ---- Hue → saturated RGB (HSV S=1 V=1) ----
+// Formula: 0 = red, 0.33 = blue, 0.67 = green  (verified by evaluation).
 vec3 hue2rgb(float h) {
     return clamp(abs(fract(h + vec3(0.0, 1.0/3.0, 2.0/3.0)) * 6.0 - 3.0) - 1.0, 0.0, 1.0);
 }
 
 // ---- Canyon path (amplitudes scale with canyon_width) ----
-// All-sin, zero at z=0.  Golden-ratio frequencies avoid repetition.
-// amp = canyon_width/200 → max deviation ≈ 62% of halfWidth at any width.
 vec2 path(float z) {
     float s   = 0.018;
     float amp = canyon_width / 200.0;
@@ -31,25 +31,22 @@ vec2 path(float z) {
     );
 }
 
-// ---- Canyon half-width (gentle variation) ----
+// ---- Canyon half-width ----
 float halfWidth(float z) {
     return canyon_width * 0.5 *
         (1.0 + 0.12 * sin(z * 0.031) + 0.08 * cos(z * 0.057 + 2.0));
 }
 
 // ---- Floor height — mirrored exactly in script.js ----
-// Max |∇h| ≈ 0.80 → SDF Lipschitz ≈ 1.28 (floor dominates).
+// Max |∇h| ≈ 0.80 → SDF Lipschitz ≈ 1.28.
 float floorHeight(vec2 xz) {
     return sin(xz.x * 0.08 + xz.y * 0.05)         * 2.5
          + sin(xz.x * 0.17 + xz.y * 0.12 + 1.7)   * 1.5
          + cos(xz.x * 0.29 + xz.y * 0.21 + 3.1)   * 0.7;
 }
 
-// ---- Wall protrusions ----
-// Left and right walls get independent bumpy insets.
-// Amplitude scales with sqrt(canyon_width/60) so narrow canyons
-// stay navigable and wide ones get dramatic rocky walls.
-// Max |∇wv| × scale ≤ 0.75 in y-z → SDF Lipschitz stays ≤ 1.28.
+// ---- Wall protrusions (independent per side, scaled with width) ----
+// wallVar() uses only p.y and p.z, so the x argument is irrelevant.
 vec2 wallVar(vec3 p) {
     float scale = sqrt(canyon_width / 60.0);
     float bL = (sin(p.z * 0.067 + p.y * 0.11)       * 1.5
@@ -62,18 +59,16 @@ vec2 wallVar(vec3 p) {
 }
 
 // ---- Scene SDF ----
-// Convention: positive = air (march), near-zero = surface, negative = solid.
 float scene(vec3 p) {
     vec2  c   = path(p.z);
     float px  = p.x - c.x;
     float hw  = halfWidth(p.z);
     vec2  wv  = wallVar(p);
 
-    float dL  =  px + hw - wv.x;        // left wall with protrusion
-    float dR  = -px + hw - wv.y;        // right wall with protrusion
+    float dL  =  px + hw - wv.x;
+    float dR  = -px + hw - wv.y;
     float dF  = p.y - floorHeight(p.xz);
 
-    // Fork pillar: central rock island, every 600 z-units.
     float fz  = fract((p.z + 200.0) / 600.0);
     float act = smoothstep(0.20, 0.35, fz) * smoothstep(0.80, 0.65, fz);
     float phw = hw * 0.20 * act;
@@ -82,21 +77,40 @@ float scene(vec3 p) {
     return min(min(dL, dR), min(dF, dP));
 }
 
-// ---- Triangulated polygon-edge glow ----
-// Divides each quad into two triangles on the main diagonal.
-// b = min barycentric coordinate: 0 at every edge, ~0.33 at centroid.
-// Screen-space fwidth keeps line width constant regardless of distance.
-float triEdge(vec2 uv, float cs) {
-    vec2  f  = fract(uv / cs);
-    float b  = (f.x + f.y < 1.0)
-             ? min(f.x, min(f.y, 1.0 - f.x - f.y))      // lower-left triangle
-             : min(1.0 - f.x, min(1.0 - f.y, f.x + f.y - 1.0));  // upper-right triangle
-    float fw = min(fwidth(b), 0.35);                     // clamp for grazing angles
-    float core = 1.0 - smoothstep(fw * 0.5, fw * 2.5, b);
-    // Halo radius expands on bass hits — same shockwave mechanic as v1.x
-    float hr   = fw * (5.0 + syn_BassHits * bass_reactivity * 10.0);
-    float halo = exp(-b / max(hr, 0.001)) * 0.35;
-    return core + halo;
+// ---- Tessellation vertex helpers ----
+// Return the actual 3D world-space position of a mesh vertex, which is
+// what makes edges follow the terrain shape instead of a UV overlay.
+
+vec3 fVert(float xi, float zj) {
+    return vec3(xi, floorHeight(vec2(xi, zj)), zj);
+}
+
+// wallVar() only reads p.y and p.z so passing x=0 is fine.
+vec3 wVertL(float zi, float yj) {
+    vec2  pc = path(zi);
+    float hw = halfWidth(zi);
+    float bL = wallVar(vec3(0.0, yj, zi)).x;
+    return vec3(pc.x - hw + bL, yj, zi);
+}
+
+vec3 wVertR(float zi, float yj) {
+    vec2  pc = path(zi);
+    float hw = halfWidth(zi);
+    float bR = wallVar(vec3(0.0, yj, zi)).y;
+    return vec3(pc.x + hw - bR, yj, zi);
+}
+
+// ---- Min barycentric coordinate of p in triangle (v0,v1,v2) ----
+// 0 at any edge → ~0.33 at centroid.  Clamped ≥ 0 to absorb the small
+// difference between the smooth SDF hit point and the tessellated plane.
+float minBary(vec3 p, vec3 v0, vec3 v1, vec3 v2) {
+    vec3  e0  = v1 - v0,  e1  = v2 - v0,  ep  = p - v0;
+    float d00 = dot(e0, e0), d01 = dot(e0, e1), d11 = dot(e1, e1);
+    float d20 = dot(ep, e0), d21 = dot(ep, e1);
+    float den = max(d00 * d11 - d01 * d01, 1e-8);
+    float bv  = (d11 * d20 - d01 * d21) / den;
+    float bw  = (d00 * d21 - d01 * d20) / den;
+    return max(min(1.0 - bv - bw, min(bv, bw)), 0.0);
 }
 
 vec4 renderMain() {
@@ -125,7 +139,7 @@ vec4 renderMain() {
 
     if (!hit) return vec4(bgCol, 1.0);
 
-    // ---- Determine which surface was hit ----
+    // ---- Identify hit surface ----
     vec3  p   = ro + rd * t;
     vec2  c   = path(p.z);
     float px  = p.x - c.x;
@@ -135,36 +149,99 @@ vec4 renderMain() {
     float dR  = -px + hw - wv.y;
     float dF  = p.y - floorHeight(p.xz);
 
-    float w;
+    // ---- Find tessellated triangle + flat normal ----
+    // Quads split on diagonal (lowT = lower-left triangle, !lowT = upper-right).
+    // Winding orders chosen so cross product points toward canyon interior.
+    float cs  = poly_size;
+    vec3  v0, v1, v2, flatN;
+
     if (dF <= dL && dF <= dR) {
-        // Floor — parameterise in (x, z)
-        w = triEdge(p.xz, poly_size);
+        // Floor — grid snapped in (x, z), height from floorHeight()
+        vec2 ci   = floor(p.xz / cs) * cs;
+        bool lowT = (fract(p.x / cs) + fract(p.z / cs) < 1.0);
+        if (lowT) {
+            v0 = fVert(ci.x,    ci.y);
+            v1 = fVert(ci.x+cs, ci.y);
+            v2 = fVert(ci.x,    ci.y+cs);
+        } else {
+            v0 = fVert(ci.x+cs, ci.y);
+            v1 = fVert(ci.x+cs, ci.y+cs);
+            v2 = fVert(ci.x,    ci.y+cs);
+        }
+        // cross(v2-v0, v1-v0) → +y (upward) for both winding types ✓
+        flatN = normalize(cross(v2 - v0, v1 - v0));
+
     } else {
-        // Wall — parameterise in (z, y) with a slow strata tilt.
-        // UV skew makes horizontal polygon edges run at a slight angle,
-        // giving the visual impression of sloped, layered rock faces.
-        // Pure UV effect: no physics impact, no Lipschitz change.
-        float tilt = sin(p.z * 0.019) * 0.45;
-        w = triEdge(vec2(p.z + tilt * p.y, p.y), poly_size);
+        float zi   = floor(p.z / cs) * cs;
+        float yj   = floor(p.y / cs) * cs;
+        bool  lowT = (fract(p.z / cs) + fract(p.y / cs) < 1.0);
+
+        if (dL < dR) {
+            // Left wall — 3D vertices account for path curve + protrusions.
+            // Normal should point +x (into canyon).
+            if (lowT) {
+                v0 = wVertL(zi,    yj);     v1 = wVertL(zi+cs, yj);
+                v2 = wVertL(zi,    yj+cs);
+            } else {
+                v0 = wVertL(zi+cs, yj);     v1 = wVertL(zi+cs, yj+cs);
+                v2 = wVertL(zi,    yj+cs);
+            }
+            // cross(v2-v0, v1-v0) → +x for a flat left wall ✓
+            flatN = normalize(cross(v2 - v0, v1 - v0));
+
+        } else {
+            // Right wall — normal should point -x (into canyon).
+            if (lowT) {
+                v0 = wVertR(zi,    yj);     v1 = wVertR(zi+cs, yj);
+                v2 = wVertR(zi,    yj+cs);
+            } else {
+                v0 = wVertR(zi+cs, yj);     v1 = wVertR(zi+cs, yj+cs);
+                v2 = wVertR(zi,    yj+cs);
+            }
+            // cross(v1-v0, v2-v0) → -x for a flat right wall ✓
+            flatN = normalize(cross(v1 - v0, v2 - v0));
+        }
     }
 
+    float b = minBary(p, v0, v1, v2);
+
+    // ---- Edge glow ----
+    // fwidth(b) keeps lines ~2px wide regardless of distance.
+    // Halo radius expands on syn_BassHits — shockwave mechanic.
+    float fw   = min(fwidth(b), 0.35);
+    float core = 1.0 - smoothstep(fw * 0.5, fw * 2.5, b);
+    float hr   = fw * (5.0 + syn_BassHits * bass_reactivity * 10.0);
+    float halo = exp(-b / max(hr, 0.001)) * 0.35;
+    float edgeVal = core + halo;
+
+    // ---- Flat-face shading ----
+    // Hemispherical wrap (0.5 + 0.5*dot) maps all normals to [0,1] so
+    // every face — including back-facing ones — gets some value.
+    // Light from upper-right-front:
+    //   floor (normal ≈ +y)     → bright  (~0.19)
+    //   left wall (normal ≈ +x) → medium  (~0.14)
+    //   right wall (norm ≈ -x)  → dim     (~0.10)
+    // Path curvature and protrusions rotate each polygon's normal slightly,
+    // giving each face a unique shade — the low-poly topology reads clearly.
+    vec3  L       = normalize(vec3(0.3, 1.0, 0.2));
+    float faceDim = 0.04 + (0.5 + 0.5 * dot(flatN, L)) * 0.16;
+
+    // Face brightness fills the interior; edge core always overrides it.
+    float w = edgeVal + faceDim * (1.0 - core);
+
     // ---- Bass ripple wave — identical to Flying Synth terrainColor() ----
-    // Ring pattern driven by syn_BassTime: advances faster during bass.
-    // At silence rings freeze; on a hit they rush outward from camera.
-    // Using t (ray depth) as distance metric — appropriate for a canyon.
+    // syn_BassTime advances faster during bass → rings rush outward on hit,
+    // freeze at silence.  t (ray depth) is the distance metric.
     float ripple = sin(t * 0.6 - syn_BassTime * 7.0);
     ripple = pow(clamp(ripple * 0.5 + 0.5, 0.0, 1.0), 3.0);
     ripple *= syn_BassLevel * bass_reactivity;
 
-    // Ripple brightens existing edges at the wavefront
     w = w * (1.0 + ripple * 2.5) + ripple * 0.12;
 
-    // ---- Shading ----
+    // ---- Final color ----
     float fog  = exp(-t * 0.006);
     vec3  wCol = hue2rgb(wire_hue);
     vec3  col  = mix(bgCol, wCol * clamp(w, 0.0, 1.5), fog);
-
-    // Sustained bass raises overall glow level
     col *= 1.0 + syn_BassLevel * bass_reactivity * 0.6;
 
     return vec4(col, 1.0);
