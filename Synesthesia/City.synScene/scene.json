@@ -1,5 +1,5 @@
 {
-	"CONTROLS" :
+	"CONTROLS" : 
 	[
 		{
 			"DEFAULT" : 0,
@@ -60,7 +60,8 @@
 	"DESCRIPTION" : "Fly through an infinite procedural city at night. Grid-marched buildings with lit windows, street glow, and rooftop beacons.",
 	"GPU" : 0,
 	"HEIGHT" : 1080,
-	"MEDIA" :
+	"IMAGE_PATH" : "default_thumbnail.png",
+	"MEDIA" : 
 	[
 		{
 			"FILTER" : "linear",

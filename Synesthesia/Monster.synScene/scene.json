@@ -1,5 +1,5 @@
 {
-	"CONTROLS" :
+	"CONTROLS" : 
 	[
 		{
 			"DEFAULT" : 0,
@@ -20,10 +20,10 @@
 			"UI_GROUP" : "Flight"
 		},
 		{
-			"DEFAULT" : 8.0,
+			"DEFAULT" : 8,
 			"DESCRIPTION" : "Forward flight speed through the monster field.",
-			"MAX" : 25.0,
-			"MIN" : 0.0,
+			"MAX" : 25,
+			"MIN" : 0,
 			"NAME" : "fly_speed",
 			"TYPE" : "slider",
 			"UI_GROUP" : "Flight"
@@ -56,10 +56,30 @@
 			"UI_GROUP" : "Flight"
 		},
 		{
-			"DEFAULT" : 1.0,
+			"DEFAULT" : -6,
+			"DESCRIPTION" : "Minimum flight altitude (floor).",
+			"MAX" : 10,
+			"MIN" : -30,
+			"NAME" : "min_height",
+			"PARAMS" : 0.5,
+			"TYPE" : "slider smooth",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 20,
+			"DESCRIPTION" : "Maximum flight altitude (ceiling).",
+			"MAX" : 60,
+			"MIN" : 0,
+			"NAME" : "max_height",
+			"PARAMS" : 0.5,
+			"TYPE" : "slider smooth",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 1,
 			"DESCRIPTION" : "Speed of creature animations — tentacle wave, terrain crawl, core pulse.",
-			"MAX" : 3.0,
-			"MIN" : 0.0,
+			"MAX" : 3,
+			"MIN" : 0,
 			"NAME" : "anim_speed",
 			"PARAMS" : 0.05,
 			"TYPE" : "slider smooth",
@@ -69,17 +89,37 @@
 			"DEFAULT" : 0.3,
 			"DESCRIPTION" : "Temporal blur — blends current frame with previous. Higher = smoother, more trails.",
 			"MAX" : 0.992,
-			"MIN" : 0.0,
+			"MIN" : 0,
 			"NAME" : "motion_blur",
 			"PARAMS" : 0.05,
 			"TYPE" : "slider smooth",
 			"UI_GROUP" : "Visual"
 		},
 		{
+			"DEFAULT" : 1.5,
+			"DESCRIPTION" : "Height multiplier for the rocky ground — 0 = flat, 1 = default, higher = taller jagged peaks.",
+			"MAX" : 5,
+			"MIN" : 0,
+			"NAME" : "terrain_hilliness",
+			"PARAMS" : 0.05,
+			"TYPE" : "slider smooth",
+			"UI_GROUP" : "Visual"
+		},
+		{
+			"DEFAULT" : 205,
+			"DESCRIPTION" : "How far the renderer looks — lower values improve performance, higher values show more distant monsters.",
+			"MAX" : 400,
+			"MIN" : 30,
+			"NAME" : "render_distance",
+			"PARAMS" : 1,
+			"TYPE" : "slider smooth",
+			"UI_GROUP" : "Visual"
+		},
+		{
 			"DEFAULT" : 0.5,
 			"DESCRIPTION" : "Strength of brightness pulse on bass hits.",
-			"MAX" : 1.0,
-			"MIN" : 0.0,
+			"MAX" : 1,
+			"MIN" : 0,
 			"NAME" : "bass_reactivity",
 			"PARAMS" : 0.05,
 			"TYPE" : "slider smooth",
@@ -88,58 +128,26 @@
 		{
 			"DEFAULT" : 0.5,
 			"DESCRIPTION" : "How much the beat drives monster movement — jump, swell, and frill flare.",
-			"MAX" : 1.0,
-			"MIN" : 0.0,
+			"MAX" : 1,
+			"MIN" : 0,
 			"NAME" : "beat_strength",
 			"PARAMS" : 0.05,
 			"TYPE" : "slider smooth",
 			"UI_GROUP" : "Audio"
-		},
-		{
-			"DEFAULT" : 1.5,
-			"DESCRIPTION" : "Height multiplier for the rocky ground — 0 = flat, 1 = default, higher = taller jagged peaks.",
-			"MAX" : 5.0,
-			"MIN" : 0.0,
-			"NAME" : "terrain_hilliness",
-			"PARAMS" : 0.05,
-			"TYPE" : "slider smooth",
-			"UI_GROUP" : "Visual"
-		},
-		{
-			"DEFAULT" : 205.0,
-			"DESCRIPTION" : "How far the renderer looks — lower values improve performance, higher values show more distant monsters.",
-			"MAX" : 400.0,
-			"MIN" : 30.0,
-			"NAME" : "render_distance",
-			"PARAMS" : 1.0,
-			"TYPE" : "slider smooth",
-			"UI_GROUP" : "Visual"
-		},
-		{
-			"DEFAULT" : -6.0,
-			"DESCRIPTION" : "Minimum flight altitude (floor).",
-			"MAX" : 10.0,
-			"MIN" : -30.0,
-			"NAME" : "min_height",
-			"PARAMS" : 0.5,
-			"TYPE" : "slider smooth",
-			"UI_GROUP" : "Flight"
-		},
-		{
-			"DEFAULT" : 20.0,
-			"DESCRIPTION" : "Maximum flight altitude (ceiling).",
-			"MAX" : 60.0,
-			"MIN" : 0.0,
-			"NAME" : "max_height",
-			"PARAMS" : 0.5,
-			"TYPE" : "slider smooth",
-			"UI_GROUP" : "Flight"
 		}
 	],
 	"CREDIT" : "RBambey",
 	"DESCRIPTION" : "Fly through a towering parade of eldritch juggernauts. Original shader \"Lowlands juggernauts\" by evvvvil_ (CC0). Flight mechanics from Ocean Planet by RBambey.",
 	"GPU" : 1,
 	"HEIGHT" : 1080,
+	"IMAGE_PATH" : "default_thumbnail.png",
+	"MEDIA" : 
+	[
+		{
+			"FILTER" : "linear",
+			"WRAP" : "repeat"
+		}
+	],
 	"TITLE" : "Monster",
 	"WIDTH" : 1920
 }

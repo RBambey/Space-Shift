@@ -1,5 +1,5 @@
 {
-	"CONTROLS" :
+	"CONTROLS" : 
 	[
 		{
 			"DEFAULT" : 0,
@@ -86,7 +86,7 @@
 			"DEFAULT" : 1.5,
 			"DESCRIPTION" : "Tree branching density. 0 = bare trunks only, 2.5 = fully branched canopy.",
 			"MAX" : 2.5,
-			"MIN" : 0.0,
+			"MIN" : 0,
 			"NAME" : "tree_density",
 			"PARAMS" : 0.05,
 			"TYPE" : "slider smooth",
@@ -95,8 +95,8 @@
 		{
 			"DEFAULT" : 0.7,
 			"DESCRIPTION" : "Fraction of cells that contain a firefly. 0 = none, 1 = up to 100 fireflies.",
-			"MAX" : 1.0,
-			"MIN" : 0.0,
+			"MAX" : 1,
+			"MIN" : 0,
 			"NAME" : "firefly_density",
 			"PARAMS" : 0.05,
 			"TYPE" : "slider smooth",
@@ -105,18 +105,18 @@
 		{
 			"DEFAULT" : 1.72,
 			"DESCRIPTION" : "Wind strength — how much the branches sway.",
-			"MAX" : 3.0,
-			"MIN" : 0.0,
+			"MAX" : 3,
+			"MIN" : 0,
 			"NAME" : "wind_strength",
 			"PARAMS" : 0.1,
 			"TYPE" : "slider smooth",
 			"UI_GROUP" : "Forest"
 		},
 		{
-			"DEFAULT" : 0.90,
+			"DEFAULT" : 0.9,
 			"DESCRIPTION" : "How much of the sky is covered by clouds. 0 = clear, 1 = overcast.",
-			"MAX" : 1.0,
-			"MIN" : 0.0,
+			"MAX" : 1,
+			"MIN" : 0,
 			"NAME" : "cloud_cover",
 			"PARAMS" : 0.05,
 			"TYPE" : "slider smooth",
@@ -126,7 +126,7 @@
 			"DEFAULT" : 0.35,
 			"DESCRIPTION" : "Temporal blur — blends current frame with previous. Higher = smoother frosted texture, more motion trails.",
 			"MAX" : 0.992,
-			"MIN" : 0.0,
+			"MIN" : 0,
 			"NAME" : "motion_blur",
 			"PARAMS" : 0.05,
 			"TYPE" : "slider smooth",
@@ -135,8 +135,8 @@
 		{
 			"DEFAULT" : 0.4,
 			"DESCRIPTION" : "Strength of canopy brightness pulse on bass hits.",
-			"MAX" : 1.0,
-			"MIN" : 0.0,
+			"MAX" : 1,
+			"MIN" : 0,
 			"NAME" : "bass_reactivity",
 			"PARAMS" : 0.05,
 			"TYPE" : "slider smooth",
@@ -148,7 +148,7 @@
 	"GPU" : 1,
 	"HEIGHT" : 1080,
 	"IMAGE_PATH" : "default_thumbnail.png",
-	"MEDIA" :
+	"MEDIA" : 
 	[
 		{
 			"FILTER" : "linear",

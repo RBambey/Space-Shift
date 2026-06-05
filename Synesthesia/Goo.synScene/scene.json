@@ -1,5 +1,5 @@
 {
-	"CONTROLS" :
+	"CONTROLS" : 
 	[
 		{
 			"DEFAULT" : 0,
@@ -22,7 +22,7 @@
 		{
 			"DEFAULT" : 4.5,
 			"DESCRIPTION" : "Forward flight speed through the tunnel.",
-			"MAX" : 15.0,
+			"MAX" : 15,
 			"MIN" : 0.5,
 			"NAME" : "fly_speed",
 			"TYPE" : "slider",
@@ -56,10 +56,10 @@
 			"UI_GROUP" : "Flight"
 		},
 		{
-			"DEFAULT" : 1.0,
+			"DEFAULT" : 1,
 			"DESCRIPTION" : "Speed of the colour shift across the goo surface. 0 = static colour.",
-			"MAX" : 4.0,
-			"MIN" : 0.0,
+			"MAX" : 4,
+			"MIN" : 0,
 			"NAME" : "colour_speed",
 			"PARAMS" : 0.05,
 			"TYPE" : "slider smooth",
@@ -69,17 +69,17 @@
 			"DEFAULT" : 0.45,
 			"DESCRIPTION" : "Temporal blur — blends current frame with previous. Higher = smoother, more trails.",
 			"MAX" : 0.992,
-			"MIN" : 0.0,
+			"MIN" : 0,
 			"NAME" : "motion_blur",
 			"PARAMS" : 0.05,
 			"TYPE" : "slider smooth",
 			"UI_GROUP" : "Visual"
 		},
 		{
-			"DEFAULT" : 7.0,
+			"DEFAULT" : 7,
 			"DESCRIPTION" : "Controls how quickly distant blobs fade to black. Lower = clearer distance, higher = heavier fog.",
-			"MAX" : 10.0,
-			"MIN" : 0.0,
+			"MAX" : 10,
+			"MIN" : 0,
 			"NAME" : "fog_density",
 			"PARAMS" : 0.1,
 			"TYPE" : "slider smooth",
@@ -88,8 +88,8 @@
 		{
 			"DEFAULT" : 0.2,
 			"DESCRIPTION" : "Strength of brightness pulse on bass hits.",
-			"MAX" : 1.0,
-			"MIN" : 0.0,
+			"MAX" : 1,
+			"MIN" : 0,
 			"NAME" : "bass_reactivity",
 			"PARAMS" : 0.05,
 			"TYPE" : "slider smooth",
@@ -98,8 +98,8 @@
 		{
 			"DEFAULT" : 0.3,
 			"DESCRIPTION" : "Strength of water-ripple effect on the goo surface triggered by bass hits.",
-			"MAX" : 1.0,
-			"MIN" : 0.0,
+			"MAX" : 1,
+			"MIN" : 0,
 			"NAME" : "bass_ripple",
 			"PARAMS" : 0.05,
 			"TYPE" : "slider smooth",
@@ -110,6 +110,14 @@
 	"DESCRIPTION" : "Fly through a gooey bioluminescent tunnel carved from noise. Original shader by Kamil Kolaczynski (CC-BY-NC-SA 3.0). Flight mechanics from Remnant Planet.",
 	"GPU" : 1,
 	"HEIGHT" : 1080,
+	"IMAGE_PATH" : "default_thumbnail.png",
+	"MEDIA" : 
+	[
+		{
+			"FILTER" : "linear",
+			"WRAP" : "repeat"
+		}
+	],
 	"TITLE" : "Goo",
 	"WIDTH" : 1920
 }
