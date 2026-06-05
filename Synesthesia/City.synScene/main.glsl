@@ -14,7 +14,8 @@ const vec3  streetColor      = vec3( 4.0, 8.0, 10.0 );
 
 const float fogDensity       = 0.5;
 const float fogDistance      = 4.0;
-const vec3  fogColor         = vec3( 0.34, 0.37, 0.4 );
+const vec3  fogColor         = vec3( 0.38, 0.32, 0.48 );  // horizon light-pollution glow
+const vec3  zenithColor      = vec3( 0.04, 0.02, 0.09 );  // near-black night sky at top
 
 const float windowSize       = 0.1;
 const float windowDivergence = 0.2;
@@ -177,7 +178,8 @@ vec4 renderMain()
     fog = exp( fogDensity * fog );
     color = mix( fogColor, color, fog );
 
-    color  = mix( fogColor, color, res.w );
+    vec3  skyCol = mix( fogColor, zenithColor, pow( clamp( ray.y, 0.0, 1.0 ), 0.7 ) );
+    color  = mix( skyCol, color, res.w );
     color += res.y * beaconColor;
     color += vec3( pow( res.y, 2.0 ) );
 
