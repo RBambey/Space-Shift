@@ -10,6 +10,7 @@
 //  v1.2: path scales with canyon_width; wall sliding collision.
 //  v2.0: polygon edges; wall protrusions; bass ripple wave.
 //  v3.0: 3D tessellated vertices; flat-face shading; green default.
+//  v4.0: Straight polygon edges (ray-plane snap); shorter walls + exterior terrain.
 // ============================================================
 
 // ---- Hue → saturated RGB (HSV S=1 V=1) ----
@@ -74,7 +75,10 @@ float scene(vec3 p) {
     float phw = hw * 0.20 * act;
     float dP  = (phw > 0.1) ? (abs(px) - phw) : 1e10;
 
-    return min(min(dL, dR), min(dF, dP));
+    float dCanyon = min(min(dL, dR), min(dF, dP));
+    // Terrain cap — canyon carved from a finite-height landscape.
+    float dTe = p.y - (floorHeight(p.xz) + wall_height);
+    return max(dCanyon, dTe);
 }
 
 // ---- Tessellation vertex helpers ----
@@ -98,6 +102,11 @@ vec3 wVertR(float zi, float yj) {
     float hw = halfWidth(zi);
     float bR = wallVar(vec3(0.0, yj, zi)).y;
     return vec3(pc.x + hw - bR, yj, zi);
+}
+
+// Exterior terrain vertex — same (x,z) grid as floor but elevated by wall_height.
+vec3 tVert(float xi, float zj) {
+    return vec3(xi, floorHeight(vec2(xi, zj)) + wall_height, zj);
 }
 
 // ---- Min barycentric coordinate of p in triangle (v0,v1,v2) ----
@@ -148,14 +157,32 @@ vec4 renderMain() {
     float dL  =  px + hw - wv.x;
     float dR  = -px + hw - wv.y;
     float dF  = p.y - floorHeight(p.xz);
+    float dTe = p.y - (floorHeight(p.xz) + wall_height);
 
     // ---- Find tessellated triangle + flat normal ----
+    // dTe > min(dL,dR,dF) means terrain cap was the nearest surface.
     // Quads split on diagonal (lowT = lower-left triangle, !lowT = upper-right).
-    // Winding orders chosen so cross product points toward canyon interior.
-    float cs  = poly_size;
+    float cs   = poly_size;
     vec3  v0, v1, v2, flatN;
 
-    if (dF <= dL && dF <= dR) {
+    float dCan = min(min(dL, dR), dF);
+    if (dTe > dCan) {
+        // Exterior terrain surface — same grid as floor, shifted up by wall_height.
+        vec2 ci   = floor(p.xz / cs) * cs;
+        bool lowT = (fract(p.x / cs) + fract(p.z / cs) < 1.0);
+        if (lowT) {
+            v0 = tVert(ci.x,    ci.y);
+            v1 = tVert(ci.x+cs, ci.y);
+            v2 = tVert(ci.x,    ci.y+cs);
+        } else {
+            v0 = tVert(ci.x+cs, ci.y);
+            v1 = tVert(ci.x+cs, ci.y+cs);
+            v2 = tVert(ci.x,    ci.y+cs);
+        }
+        // cross(v2-v0, v1-v0) → +y ✓
+        flatN = normalize(cross(v2 - v0, v1 - v0));
+
+    } else if (dF <= dL && dF <= dR) {
         // Floor — grid snapped in (x, z), height from floorHeight()
         vec2 ci   = floor(p.xz / cs) * cs;
         bool lowT = (fract(p.x / cs) + fract(p.z / cs) < 1.0);
@@ -203,7 +230,16 @@ vec4 renderMain() {
         }
     }
 
-    float b = minBary(p, v0, v1, v2);
+    // ---- Snap hit point to flat triangle plane (straight edges) ----
+    // The SDF march lands on the smooth curved surface; re-intersecting with
+    // the actual flat polygon plane makes every edge a perfectly straight line.
+    float pDen  = dot(rd, flatN);
+    vec3  pFlat = p;
+    if (abs(pDen) > 1e-6) {
+        float s_flat = dot(v0 - ro, flatN) / pDen;
+        if (s_flat > 0.0) pFlat = ro + s_flat * rd;
+    }
+    float b = minBary(pFlat, v0, v1, v2);
 
     // ---- Edge glow ----
     // fwidth(b) keeps lines ~2px wide regardless of distance.

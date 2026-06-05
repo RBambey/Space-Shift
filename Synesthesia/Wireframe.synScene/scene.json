@@ -105,6 +105,16 @@
 			"UI_GROUP" : "Visual"
 		},
 		{
+			"DEFAULT" : 25,
+			"DESCRIPTION" : "Height of canyon walls above the floor. Lower = shallower canyon with exterior terrain visible above the rim.",
+			"MAX" : 80,
+			"MIN" : 5,
+			"NAME" : "wall_height",
+			"PARAMS" : 0.1,
+			"TYPE" : "slider smooth",
+			"UI_GROUP" : "Visual"
+		},
+		{
 			"DEFAULT" : 0.5,
 			"DESCRIPTION" : "How strongly bass pulses edge glow and drives the ripple wave.",
 			"MAX" : 1,
@@ -116,7 +126,7 @@
 		}
 	],
 	"CREDIT" : "RBambey",
-	"DESCRIPTION" : "Low-poly canyon fly-through. Towering walls rendered as triangulated polygon edges — geometric facets like early computer wireframe graphics. Wall protrusions, layered strata, and bass ripple waves.",
+	"DESCRIPTION" : "Low-poly canyon fly-through. Walls and terrain rendered as flat-shaded triangular facets with straight polygon edges — early wireframe computer graphics style. Shorter walls open onto exterior landscape. Wall protrusions and bass ripple waves.",
 	"GPU" : 0,
 	"HEIGHT" : 1080,
 	"IMAGE_PATH" : "default_thumbnail.png",

@@ -225,7 +225,7 @@ function update(dt) {
           barrel_roll: barrel_roll, fly_speed: fly_speed, recenter: recenter },
         { recenterY:  function(x, z) { return floorHeight(x, z) + 5.0; },
           altMin:     function(x, z) { return floorHeight(x, z) + 1.5; },
-          altMax:     function(x, z) { return floorHeight(x, z) + 65.0; },
+          altMax:     function(x, z) { return floorHeight(x, z) + wall_height + 40.0; },
           wallLeft:   function(x, z) { return pathCenter(z) - halfWidthJS(z) + wallMargin(); },
           wallRight:  function(x, z) { return pathCenter(z) + halfWidthJS(z) - wallMargin(); } }
     );
