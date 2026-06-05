@@ -93,6 +93,16 @@
 			"UI_GROUP" : "Forest"
 		},
 		{
+			"DEFAULT" : 0.7,
+			"DESCRIPTION" : "Fraction of cells that contain a firefly. 0 = none, 1 = up to 100 fireflies.",
+			"MAX" : 1.0,
+			"MIN" : 0.0,
+			"NAME" : "firefly_density",
+			"PARAMS" : 0.05,
+			"TYPE" : "slider smooth",
+			"UI_GROUP" : "Forest"
+		},
+		{
 			"DEFAULT" : 1.72,
 			"DESCRIPTION" : "Wind strength — how much the branches sway.",
 			"MAX" : 3.0,
@@ -134,7 +144,7 @@
 		}
 	],
 	"CREDIT" : "RBambey",
-	"DESCRIPTION" : "Fly through an alien jungle planet. Fractal reed-tube trees with 3 levels of branching, vivid green foliage, purple shadows, and hard ground shadows cast by every trunk and branch.",
+	"DESCRIPTION" : "Fly through an alien jungle planet. Fractal reed-tube trees with 2 levels of branching, vivid green foliage, purple shadows, and hard ground shadows cast by every trunk and branch.",
 	"GPU" : 1,
 	"HEIGHT" : 1080,
 	"IMAGE_PATH" : "default_thumbnail.png",

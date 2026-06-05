@@ -4,7 +4,7 @@
 //  Tree SDF technique from "Frosted Forest" by eiffie (CC-BY-NC-SA 3.0).
 //  6-DOF flight from Ocean Planet by RBambey.
 //
-//  Trees: reed-tube SDFs with 3 levels of fractal branching (KIFS).
+//  Trees: reed-tube SDFs with 2 levels of fractal branching (KIFS).
 //         Per-tile hashes give each tree unique branching depth, tier
 //         height, and canopy splay. Wind sway scales with height.
 //  Render: solid opaque single-hit raymarching. No transparency.
@@ -57,7 +57,7 @@ float DE(vec3 p0) {
     { float sy = clamp(p.y, -1.0, 1.0); p.xz -= sy * sy * splay; }
     d     = reed(p, dr);
 
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 2; i++) {
         if (float(i) > rnd) break;
         p.y  -= yStep;
         p    *= 2.0;  dr *= 2.0;
@@ -150,6 +150,60 @@ vec3 forestSky(vec3 rd, float sunDot) {
     return sky;
 }
 
+// ---- Fireflies ---------------------------------------------------------
+
+vec3 addFireflies(vec3 col, vec3 ro, vec3 rd, float maxT) {
+    // Color uses raw bass so a real hit fully shifts to red.
+    // Brightness uses bass_reactivity so the user can tune the flash intensity.
+    float bassRaw = clamp(syn_BassLevel, 0.0, 1.0);
+    float pulse   = pow(bassRaw, 1.5);
+
+    vec3  yellow = vec3(1.00, 0.82, 0.08);
+    vec3  red    = vec3(1.50, 0.05, 0.00);
+    vec3  ffCol  = mix(yellow, red, pulse);
+    float bright = 1.0 + pulse * bass_reactivity * 5.0;
+
+    const float CELL = 11.0;
+
+    for (int ix = 0; ix < 10; ix++) {
+    for (int iz = 0; iz < 10; iz++) {
+        float tx = (floor(ro.x / CELL) + float(ix) - 5.0) * CELL;
+        float tz = (floor(ro.z / CELL) + float(iz) - 5.0) * CELL;
+
+        float h1 = fract(sin(tx * 0.0311 + tz * 0.0713 + 127.1) * 43758.5);
+        float h2 = fract(sin(tx * 0.0431 + tz * 0.0571 +  83.7) * 43758.5);
+        float h3 = fract(sin(tx * 0.0173 + tz * 0.0839 + 311.7) * 43758.5);
+        float h4 = fract(sin(tx * 0.0617 + tz * 0.0397 +  74.3) * 43758.5);
+        float h5 = fract(sin(tx * 0.0531 + tz * 0.0479 + 269.5) * 43758.5);
+        float h6 = fract(sin(tx * 0.0271 + tz * 0.0691 + 173.6) * 43758.5);
+        if (h6 > firefly_density) continue;
+
+        float t = TIME;
+        vec3 ffp;
+        ffp.x = tx + h1 * CELL + sin(t * (0.07 + h4 * 0.10) + h2 * 6.283) * 2.5;
+        ffp.z = tz + h2 * CELL + cos(t * (0.09 + h5 * 0.09) + h3 * 6.283) * 2.5;
+        ffp.y = 0.5 + h3 * 10.0 + sin(t * (0.06 + h4 * 0.08) + h1 * 6.283) * 1.8;
+        ffp.y = max(ffp.y, 0.3);
+
+        vec3  dp    = ffp - ro;
+        float along = dot(dp, rd);
+        if (along < 1.0 || along > maxT) continue;
+        float d2    = max(0.0, dot(dp, dp) - along * along);
+
+        float flicker = pow(max(sin(t * (2.0 + h5 * 3.0) + h1 * 6.283), 0.0), 2.5) * 0.8 + 0.2;
+        flicker = mix(flicker, 1.0, pulse);  // bass hit snaps all fireflies to full brightness together
+
+        float glow = (exp(-d2 * 40.0) * 1.8
+                   +  exp(-d2 *  3.5) * 0.5)
+                   * bright * flicker
+                   / (1.0 + along * along * 0.003);
+
+        col += ffCol * glow;
+    }}
+
+    return col;
+}
+
 // ---- Main --------------------------------------------------------------
 
 vec4 renderMain() {
@@ -197,6 +251,17 @@ vec4 renderMain() {
             vec3(0.06, 0.52, 0.05),
             isGround);
 
+        // Mango tip caps: upward-facing branch ends shade green→yellow→red with sun angle
+        float capness  = smoothstep(0.3, 0.9, N.y) * (1.0 - isGround);
+        float sun01    = dot(N, SUN_DIR) * 0.5 + 0.5;
+        float varSeed  = fract(sin(p.x * 0.173 + p.z * 0.317) * 43758.5);
+        vec3  mGreen   = vec3(0.10, 0.50, 0.06);
+        vec3  mYellow  = vec3(0.94, 0.72, 0.04);
+        vec3  mRed     = mix(vec3(0.80, 0.08, 0.03), vec3(0.65, 0.06, 0.18), varSeed);
+        vec3  mangoCol = mix(mix(mGreen, mYellow, smoothstep(0.1, 0.55, sun01)),
+                             mRed,                smoothstep(0.50, 0.95, sun01));
+        baseCol = mix(baseCol, mangoCol, capness);
+
         // Lighting: ambient + sun + hotspot + specular
         float ndotl   = clamp(dot(N, SUN_DIR), 0.0, 1.0);
         float hotspot = smoothstep(0.55, 1.0, ndotl) * (0.4 + topFace * 0.6);
@@ -216,6 +281,9 @@ vec4 renderMain() {
         scol *= 1.0 + syn_BassLevel * bass_reactivity * 0.3;
         scol  = mix(scol, vec3(0.06, 0.36, 0.08), 1.0 - exp(-hitT / (draw_distance * 2.5)));
     }
+
+    float ffMaxT = hitT >= 0.0 ? hitT : draw_distance;
+    scol = addFireflies(scol, ro, rd, ffMaxT);
 
     // Post-process: gamma, saturation, vignette
     vec3 finalCol = pow(max(scol, vec3(0.0)), vec3(0.72));
