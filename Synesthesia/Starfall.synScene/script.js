@@ -10,11 +10,11 @@ var cam = (function(opts) {
     var camZ  = opts.startZ != null ? opts.startZ : 0.0;
     var snapX = opts.snapXOnRecenter || false;
 
-    // Start looking straight up into the falling stars.
-    // camFwd = world +Y; camRight = world +X; camUp = world -Z (screen top = backward).
+    // Start looking straight down into the falling stars.
+    // camFwd = world -Y; camRight = world +X; camUp = world +Z (screen top = forward).
     var camRight = [1, 0, 0];
-    var camUp    = [0, 0, -1];
-    var camFwd   = [0, 1, 0];
+    var camUp    = [0, 0, 1];
+    var camFwd   = [0, -1, 0];
 
     var rollIdleTime     = 0.0;
     var pitchIdleTime    = 0.0;
