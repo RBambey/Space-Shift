@@ -13,8 +13,8 @@
 
 const float FOV               = 0.4;
 const float MarchDumping      = 0.7579;
-const float Far               = 80.0;
-const int   MaxSteps          = 128;
+const float Far               = 60.0;
+// MaxSteps driven by the max_steps slider (scene.json) — cast to int each frame.
 const float TunnelSmoothFactor = 2.0;
 const float TunnelRadius      = 2.0;
 const float TunnelFreqA       = 0.18003;
@@ -83,7 +83,7 @@ vec2 castRay(vec3 ro, vec3 rd) {
     float precis = 0.002;
     float t = 0.0;
     float m = M_NONE;
-    for (int i = 0; i < MaxSteps; i++) {
+    for (int i = 0; i < int(max_steps); i++) {
         vec2 res = map(ro + rd * t);
         if (res.x < precis || t > Far) break;
         t += res.x * MarchDumping;
@@ -96,7 +96,7 @@ vec2 castRay(vec3 ro, vec3 rd) {
 float softshadow(vec3 ro, vec3 rd, float mint, float tmax) {
     float res = 1.0;
     float t   = mint;
-    for (int i = 0; i < 16; i++) {
+    for (int i = 0; i < 8; i++) {
         float h = map(ro + rd * t).x;
         res = min(res, 8.0 * h / t);
         t  += clamp(h, 0.02, 0.10);
@@ -105,17 +105,20 @@ float softshadow(vec3 ro, vec3 rd, float mint, float tmax) {
     return clamp(res, 0.0, 1.0);
 }
 
+// Tetrahedron normal — 4 map() calls instead of 6, same quality.
 vec3 calcNormal(vec3 pos) {
-    vec2 eps = vec2(0.001, 0.0);
-    return normalize(vec3(
-        map(pos + eps.xyy).x - map(pos - eps.xyy).x,
-        map(pos + eps.yxy).x - map(pos - eps.yxy).x,
-        map(pos + eps.yyx).x - map(pos - eps.yyx).x));
+    const float h = 0.001;
+    const vec2  k = vec2(1.0, -1.0);
+    return normalize(
+        k.xyy * map(pos + k.xyy * h).x +
+        k.yxy * map(pos + k.yxy * h).x +
+        k.yyx * map(pos + k.yyx * h).x +
+        k.xxx * map(pos + k.xxx * h).x);
 }
 
 float calcAO(vec3 pos, vec3 nor) {
     float occ = 0.0, sca = 1.0;
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < 3; i++) {
         float hr    = 0.01 + 0.12 * float(i) / 4.0;
         vec3  aopos = nor * hr + pos;
         float dd    = map(aopos).x;
