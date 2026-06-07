@@ -113,6 +113,7 @@ class MappingEntry:
     osc_address: str = ""     # custom OSC address; blank = auto (/cc/N or /note/N)
     enabled: bool = True      # False = mapping is paused
     controller_index: int = 0  # pygame joystick index this mapping reads from
+    lockout_seconds: float = 0.0  # minimum seconds between button triggers (0 = disabled)
 
     def label(self):
         pause = "⏸ " if not self.enabled else "  "
@@ -134,6 +135,8 @@ class MappingEntry:
                 flags.append(f"dz{self.deadzone:.2f}")
             if self.snap_floor > 0:
                 flags.append(f"sf{self.snap_floor}")
+        if self.lockout_seconds > 0:
+            flags.append(f"LOCK {self.lockout_seconds:.1f}s")
         flag_str = f"  [{', '.join(flags)}]" if flags else ""
         name_col = f"{self.name:<14}" if self.name else " " * 14
         src_col = f"C{self.controller_index}:{self.source:<8}"
@@ -187,6 +190,7 @@ class MidiEngine:
         self._joysticks: list = []   # all active hardware joysticks, indexed by controller_index
         self._last_axis: dict = {}
         self._button_state: dict = {}
+        self._last_trigger: dict = {}  # mapping id → time.time() of last button trigger
         self.activity_queue: queue.Queue = queue.Queue()
         self._ap_config = AutopilotConfig()
         self._ap_values: dict = {}
@@ -352,6 +356,11 @@ class MidiEngine:
                     prev = self._button_state.get(_btn_key, False)
                     if pressed != prev:
                         self._button_state[_btn_key] = pressed
+                        if pressed and m.lockout_seconds > 0.0:
+                            now = time.time()
+                            if (now - self._last_trigger.get(id(m), 0.0)) < m.lockout_seconds:
+                                continue
+                            self._last_trigger[id(m)] = now
                         self._pl_last_advance = time.time()
                         if m.out_type == "playlist_next":
                             if pressed:
@@ -700,10 +709,22 @@ class MappingDialog(tk.Toplevel):
         tk.Spinbox(self._vel_frame, from_=1, to=127, textvariable=self._vel_var,
                    width=6, **skw).grid(row=0, column=1, **pad)
 
+        # Lockout (button sources only)
+        self._lockout_lbl = tk.Label(self, text="Lockout (s):", **lkw)
+        self._lockout_lbl.grid(row=8, column=0, sticky="e", **pad)
+        self._lockout_var = tk.DoubleVar(value=0.0)
+        self._lockout_sb = tk.Spinbox(self, from_=0.0, to=30.0, increment=0.5,
+                                      textvariable=self._lockout_var, width=5, **skw)
+        self._lockout_sb.grid(row=8, column=1, sticky="w", padx=(8, 4), pady=4)
+        self._lockout_hint = tk.Label(self, text="(0 = off)", fg=_C["fg_dim"],
+                                      bg=_C["bg"], font=("Helvetica", 9))
+        self._lockout_hint.grid(row=8, column=2, sticky="w")
+        self._lockout_widgets = [self._lockout_lbl, self._lockout_sb, self._lockout_hint]
+
         # OSC address override
-        tk.Label(self, text="OSC address:", **lkw).grid(row=8, column=0, sticky="e", **pad)
+        tk.Label(self, text="OSC address:", **lkw).grid(row=9, column=0, sticky="e", **pad)
         osc_row = tk.Frame(self, bg=_C["bg"])
-        osc_row.grid(row=8, column=1, columnspan=2, sticky="ew", **pad)
+        osc_row.grid(row=9, column=1, columnspan=2, sticky="ew", **pad)
         self._osc_addr_var = tk.StringVar()
         tk.Entry(osc_row, textvariable=self._osc_addr_var, width=18, **ekw).pack(side="left")
         tk.Label(osc_row, text="(blank = auto)", fg=_C["fg_dim"],
@@ -711,7 +732,7 @@ class MappingDialog(tk.Toplevel):
 
         # OK / Cancel
         btn_frame = tk.Frame(self, bg=_C["bg"])
-        btn_frame.grid(row=9, column=0, columnspan=3, pady=8)
+        btn_frame.grid(row=10, column=0, columnspan=3, pady=8)
         tk.Button(btn_frame, text="OK", width=8, command=self._ok, **bkw).pack(side="left", padx=4)
         tk.Button(btn_frame, text="Cancel", width=8, command=self.destroy, **bkw).pack(side="left", padx=4)
 
@@ -730,6 +751,7 @@ class MappingDialog(tk.Toplevel):
             self._dz_var.set(entry.deadzone)
             self._dz_lbl.config(text=f"±{entry.deadzone:.3f}")
             self._snap_floor_var.set(entry.snap_floor)
+            self._lockout_var.set(entry.lockout_seconds)
             self._osc_min_var.set(entry.osc_min)
             self._osc_max_var.set(entry.osc_max)
             self._osc_addr_var.set(entry.osc_address)
@@ -807,6 +829,9 @@ class MappingDialog(tk.Toplevel):
             else:
                 self._vel_frame.grid_remove()
 
+        for w in self._lockout_widgets:
+            (w.grid_remove() if is_axis else w.grid())
+
     def _ok(self):
         src_label = self._src_var.get()
         src = next((s for s in self._sources if s[2] == src_label), None)
@@ -833,6 +858,7 @@ class MappingDialog(tk.Toplevel):
             name=self._name_var.get().strip(),
             osc_address=self._osc_addr_var.get().strip(),
             controller_index=self._ctrl_cb.current(),
+            lockout_seconds=round(self._lockout_var.get(), 2),
         )
         self.destroy()
 
