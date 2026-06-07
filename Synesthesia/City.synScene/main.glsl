@@ -21,9 +21,6 @@ const float windowSize       = 0.1;
 const float windowDivergence = 0.2;
 const vec3  windowColor      = vec3( 0.1, 0.2, 0.5 );
 
-const float beaconProb       = 0.0003;
-const float beaconFreq       = 0.6;
-const vec3  beaconColor      = vec3( 1.5, 0.2, 0.0 );
 
 const float tau              = 6.283185;
 
@@ -69,10 +66,27 @@ float noise1( vec2 p ) {
                      hash1( i + vec2( 1.0, 1.0 ) ), u.x ), u.y );
 }
 
+// ---- Audio helpers ----
+
+// beat(): combines sustained bass level + transient hits, shaped by bass_pow curve.
+// bass_mix.x weights syn_BassLevel (sustained); bass_mix.y weights syn_BassHits (transients).
+float beat() {
+    return dot(
+        pow( clamp( vec2( syn_BassLevel, syn_BassHits ), 0.0, 1.0 ), vec2( bass_pow ) ),
+        bass_mix
+    );
+}
+
+// freq(): sample FFT spectrum at normalized frequency x (0 = bass, 1 = treble).
+float freq( float x ) {
+    return textureLod( syn_Spectrum, x, 0.0 ).y;
+}
+
 // ---- Grid ray marcher ----
 // Buildings tile the XZ plane; Y is height.
 
-vec4 castRay( vec3 eye, vec3 ray ) {
+vec4 castRay( vec3 eye, vec3 ray, out vec3 antennaGlow ) {
+    antennaGlow = vec3( 0.0 );
     vec2 block = floor( eye.xz );
     vec3 ri    = 1.0 / ray;
     vec3 rs    = sign( ray );
@@ -113,19 +127,41 @@ vec4 castRay( vec3 eye, vec3 ray ) {
             }
         }
 
-        float prob = beaconProb * pow( height, 3.0 );
-        vec2  h    = hash2( block );
-        if ( h.x < prob ) {
-            vec3  center = vec3( block.x + 0.5, height + 0.2, block.y + 0.5 );
-            float bt     = dot( center - eye, ray );
-            if ( bt < dist ) {
-                vec3  bp   = eye + bt * ray;
-                float bfog = ( exp( -bp.y / fogDistance ) - exp( -eye.y / fogDistance ) )
+        // ---- Spectrum-analyzer antenna ----
+        vec2  h            = hash2( block );
+        float heightFactor = smoothstep( 2.0, 6.0, height );
+        if ( h.x < antenna_probability * heightFactor ) {
+            const float antennaLen = 0.5;       // mast height above building peak
+            vec2  axisXZ = block + 0.5;         // building center in XZ
+            vec2  eyeXZ  = eye.xz;
+            vec2  rayXZ  = ray.xz;
+            float lenSq  = max( dot( rayXZ, rayXZ ), 1e-8 );
+            float ta     = dot( axisXZ - eyeXZ, rayXZ ) / lenSq;
+
+            if ( ta > 0.0 && ta < dist ) {
+                float hitY = eye.y + ta * ray.y;
+                // s: 0 = antenna base (bass), 1 = antenna tip (treble)
+                float s    = clamp( ( hitY - height ) / antennaLen, 0.0, 1.0 );
+
+                // Sample FFT spectrum at this frequency band
+                float fftVal = freq( s );
+                float lit    = smoothstep( fft_limit, fft_limit + 0.2, fftVal );
+
+                // Radial glow falloff from mast axis in XZ
+                vec2  hitXZ  = eyeXZ + ta * rayXZ;
+                float d2D    = length( axisXZ - hitXZ );
+                float radial = exp( -d2D * d2D * 200.0 );
+
+                // Fog attenuation at the antenna point
+                vec3  ap   = eye + ta * ray;
+                float afog = ( exp( -ap.y / fogDistance ) - exp( -eye.y / fogDistance ) )
                            / ray.y;
-                bfog  = exp( fogDensity * bfog );
-                bt    = distance( center, bp );
-                bfog *= pow( syn_BassLevel, 3.0 ) * 8.0;
-                beacon += bfog * pow( clamp( 1.0 - 2.0 * bt, 0.0, 1.0 ), 4.0 );
+                afog = exp( fogDensity * afog );
+
+                // Color: bass base = warm orange, treble tip = cool cyan
+                vec3 antCol = mix( vec3( 1.0, 0.4, 0.0 ), vec3( 0.0, 0.8, 1.0 ), s );
+
+                antennaGlow += lit * radial * afog * antCol * 3.0;
             }
         }
 
@@ -156,7 +192,8 @@ vec4 renderMain()
     vec2 sc     = ( _uv - 0.5 ) * vec2( RENDERSIZE.x / RENDERSIZE.y, 1.0 );
     vec3 ray    = normalize( cFwd + cRight * sc.x + cUp * sc.y );
 
-    vec4 res = castRay( eye, ray );
+    vec3 antennaGlow;
+    vec4 res = castRay( eye, ray, antennaGlow );
     vec3 p   = eye + res.x * ray;
 
     // Window colors per building block
@@ -168,8 +205,9 @@ vec4 renderMain()
     vec3 color = windowColor + windowDivergence * ( hash3( block ) - 0.5 );
     color *= smoothstep( 0.1, 0.9, fract( 2.5 * ( wx * wy * wz ) ) );
 
-    // Street glow rising from ground (Y-up)
-    vec3 streetLevel = streetColor * exp( -p.y / streetDistance );
+    // Street glow — bass-reactive via beat(): 30% ambient at silence, 100% at full beat
+    float B          = beat();
+    vec3 streetLevel = streetColor * exp( -p.y / streetDistance ) * ( 0.3 + B * 0.7 );
     color += streetLevel;
     color = clamp( mix( 0.25 * streetLevel, color, res.z ), 0.0, 1.0 );
 
@@ -180,8 +218,9 @@ vec4 renderMain()
 
     vec3  skyCol = mix( fogColor, zenithColor, pow( clamp( ray.y, 0.0, 1.0 ), 0.7 ) );
     color  = mix( skyCol, color, res.w );
-    color += res.y * beaconColor;
-    color += vec3( pow( res.y, 2.0 ) );
+    color += antennaGlow;
+    float antLum = dot( antennaGlow, vec3( 0.2126, 0.7152, 0.0722 ) );
+    color += vec3( antLum * antLum );   // white bloom from bright antenna segments
 
     return vec4( color, 1.0 );
 }

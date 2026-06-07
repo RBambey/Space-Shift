@@ -54,10 +54,50 @@
 			"NAME" : "yaw_rate",
 			"TYPE" : "slider",
 			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 0.3,
+			"DESCRIPTION" : "Fraction of taller buildings that grow spectrum-analyzer antennas (0 = none, 1 = all tall buildings).",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "antenna_probability",
+			"PARAMS" : 0.05,
+			"TYPE" : "slider smooth",
+			"UI_GROUP" : "Visual"
+		},
+		{
+			"DEFAULT" : [0.4, 0.3],
+			"DESCRIPTION" : "Street glow audio response — X: sustained bass level, Y: bass hits/transients.",
+			"MAX" : [1, 1],
+			"MIN" : [0, 0],
+			"NAME" : "bass_mix",
+			"PARAMS" : 0.1,
+			"TYPE" : "xy smooth",
+			"UI_GROUP" : "Audio"
+		},
+		{
+			"DEFAULT" : 4.5,
+			"DESCRIPTION" : "Response curve — higher = only the hardest hits register, lower = broader response to quiet bass.",
+			"MAX" : 6,
+			"MIN" : 0,
+			"NAME" : "bass_pow",
+			"PARAMS" : 0.2,
+			"TYPE" : "slider smooth",
+			"UI_GROUP" : "Audio"
+		},
+		{
+			"DEFAULT" : 0.35,
+			"DESCRIPTION" : "Minimum spectrum level to light an antenna segment — raise to show only loud peaks, lower for more detail.",
+			"MAX" : 1,
+			"MIN" : -0.1,
+			"NAME" : "fft_limit",
+			"PARAMS" : 0.05,
+			"TYPE" : "slider smooth",
+			"UI_GROUP" : "Audio"
 		}
 	],
 	"CREDIT" : "RBambey",
-	"DESCRIPTION" : "Fly through an infinite procedural city at night. Grid-marched buildings with lit windows, street glow, and rooftop beacons.",
+	"DESCRIPTION" : "Fly through an infinite procedural city at night. Grid-marched buildings with lit windows, bass-reactive street glow, and spectrum-analyzer antennas.",
 	"GPU" : 0,
 	"HEIGHT" : 1080,
 	"IMAGE_PATH" : "default_thumbnail.png",
