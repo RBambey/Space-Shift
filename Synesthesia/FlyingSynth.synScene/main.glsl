@@ -90,7 +90,7 @@ vec3 terrainColor(vec3 hit, float dist) {
     vec3 glowCol = neonPalette(hueT + 0.3) * 0.4;
 
     float brightness = 1.5 + ripple * 2.0;  // ripple brightens lines as it passes
-    float fog        = exp(-dist * 0.018);
+    float fog        = exp(-dist * (2.16 / draw_distance));
 
     // Anti-aliased grid at floor level — fwidth kills the moiré at grazing angles
     float gridSize = 3.0;
@@ -236,7 +236,7 @@ vec4 renderMain() {
 
     t = 0.1;
 
-    for (int i = 0; i < 120; i++) {
+    for (int i = 0; i < 200; i++) {
         hit = ro + rd * t;
         h   = hit.y - terrain(hit.xz);
 
@@ -258,7 +258,7 @@ vec4 renderMain() {
             break;
         }
 
-        stepSize = max(0.1, h * 0.5);
+        stepSize = max(0.1 + t * 0.004, h * 0.5);
         t += stepSize;
         if (t > draw_distance) break;
     }

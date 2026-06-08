@@ -24,6 +24,8 @@ const vec3  windowColor      = vec3( 0.1, 0.2, 0.5 );
 const float beaconProb       = 0.0003;
 const vec3  beaconColor      = vec3( 1.5, 0.2, 0.0 );
 
+const float beamProb         = 0.00004;
+
 const float tau              = 6.283185;
 
 // ---- Hash functions ----
@@ -91,11 +93,15 @@ float freq( float x ) {
     return textureLod( syn_Spectrum, x, 0.0 ).y;
 }
 
+// Boulevard extra inset per side: computed once per frame as a uniform expression.
+// Used inline in castRay rather than via helper functions to avoid redundant evaluation.
+
 // ---- Grid ray marcher ----
 // Buildings tile the XZ plane; Y is height.
 
-vec4 castRay( vec3 eye, vec3 ray, out vec3 antennaGlow ) {
+vec4 castRay( vec3 eye, vec3 ray, out vec3 antennaGlow, out vec3 beamGlow ) {
     antennaGlow = vec3( 0.0 );
+    beamGlow    = vec3( 0.0 );
     vec2 block = floor( eye.xz );
     vec3 ri    = 1.0 / ray;
     vec3 rs    = sign( ray );
@@ -105,9 +111,21 @@ vec4 castRay( vec3 eye, vec3 ray, out vec3 antennaGlow ) {
 
     float beacon = 0.0;
 
+    // Hoist loop-invariant values
+    float blvdExtra  = 0.16 * ( blvd_width - 1.0 );
+    float beamEpoch  = floor( syn_Time * 0.15 );
+    float bassHitPow = pow( clamp( syn_BassHits, 0.0, 1.0 ), 2.5 );
+    vec2  eyeXZ      = eye.xz;
+    vec2  rayXZ      = ray.xz;
+    float rayXZlenSq = max( dot( rayXZ, rayXZ ), 1e-8 );
+
     for ( int i = 0; i < 200; ++i ) {
-        vec2  lo0    = block + 0.01;
-        vec2  hi0    = block + 0.69;
+        vec2  lo0    = block + vec2(
+                           mod( block.x,       chunk_size ) < 0.5 ? 0.01 + blvdExtra : 0.01,
+                           mod( block.y,       chunk_size ) < 0.5 ? 0.01 + blvdExtra : 0.01 );
+        vec2  hi0    = block + vec2(
+                           mod( block.x + 1.0, chunk_size ) < 0.5 ? 0.69 - blvdExtra : 0.69,
+                           mod( block.y + 1.0, chunk_size ) < 0.5 ? 0.69 - blvdExtra : 0.69 );
         float height = ( 0.5 + hash1( block ) )
                      * ( 2.0 + 4.0 * pow( noise1( 0.1 * block ), 2.5 ) );
 
@@ -140,12 +158,9 @@ vec4 castRay( vec3 eye, vec3 ray, out vec3 antennaGlow ) {
         vec2  h            = hash2( block );
         float heightFactor = smoothstep( 2.0, 6.0, height );
         if ( h.x < antenna_probability * heightFactor ) {
-            const float antennaLen = 8.0;       // mast height above building peak
-            vec2  axisXZ = block + 0.5;         // building center in XZ
-            vec2  eyeXZ  = eye.xz;
-            vec2  rayXZ  = ray.xz;
-            float lenSq  = max( dot( rayXZ, rayXZ ), 1e-8 );
-            float ta     = dot( axisXZ - eyeXZ, rayXZ ) / lenSq;
+            const float antennaLen = 8.0;
+            vec2  axisXZ = block + 0.5;
+            float ta     = dot( axisXZ - eyeXZ, rayXZ ) / rayXZlenSq;
 
             if ( ta > 0.0 && ta < dist ) {
                 float hitY = eye.y + ta * ray.y;
@@ -195,6 +210,29 @@ vec4 castRay( vec3 eye, vec3 ray, out vec3 antennaGlow ) {
             }
         }
 
+        // ---- Searchlight beam ----
+        // bassHitPow is uniform — this branch skips all 200 hash calls when music is quiet.
+        if ( bassHitPow > 0.001 && hash1( block, beamEpoch + 37.9 ) < beamProb ) {
+            vec2  beamXZ = block + 0.5;
+            float ta     = dot( beamXZ - eyeXZ, rayXZ ) / rayXZlenSq;
+            if ( ta > 0.0 ) {
+                float hitY = eye.y + ta * ray.y;
+                if ( hitY > height ) {
+                    vec2  hitXZ  = eyeXZ + ta * rayXZ;
+                    float d2D    = length( beamXZ - hitXZ );
+                    float radial = exp( -d2D * d2D / ( 2.0 * 0.07 * 0.07 ) );
+                    float heightFade = exp( -( hitY - height ) * 0.04 );
+                    vec3  bp   = eye + ta * ray;
+                    float bfog = ( exp( -bp.y / fogDistance ) - exp( -eye.y / fogDistance ) )
+                               / ray.y;
+                    bfog = exp( fogDensity * bfog );
+                    float beamHue = 0.55 + hash1( block, beamEpoch + 13.1 ) * 0.17;
+                    vec3  beamCol = hsv2rgb( vec3( beamHue, 0.85, 1.0 ) );
+                    beamGlow += bassHitPow * 12.0 * radial * heightFade * bfog * beamCol;
+                }
+            }
+        }
+
         if ( dist < 400.0 ) {
             return vec4( dist, beacon, face, 1.0 );
         }
@@ -223,7 +261,8 @@ vec4 renderMain()
     vec3 ray    = normalize( cFwd + cRight * sc.x + cUp * sc.y );
 
     vec3 antennaGlow;
-    vec4 res = castRay( eye, ray, antennaGlow );
+    vec3 beamGlow;
+    vec4 res = castRay( eye, ray, antennaGlow, beamGlow );
     vec3 p   = eye + res.x * ray;
 
     // Window colors per building block
@@ -248,12 +287,17 @@ vec4 renderMain()
 
     vec3  skyCol = mix( fogColor, zenithColor, pow( clamp( ray.y, 0.0, 1.0 ), 0.7 ) );
     color  = mix( skyCol, color, res.w );
+
     color += antennaGlow;
     float antLum = dot( antennaGlow, vec3( 0.2126, 0.7152, 0.0722 ) );
     color += vec3( antLum * antLum );   // white bloom from bright antenna segments
 
     color += res.y * beaconColor;
     color += beaconColor * pow( res.y, 2.0 );
+
+    color += beamGlow;
+    float beamLum = dot( beamGlow, vec3( 0.2126, 0.7152, 0.0722 ) );
+    color += beamGlow * beamLum;   // bloom on bright hits
 
     return vec4( color, 1.0 );
 }

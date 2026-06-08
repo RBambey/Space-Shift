@@ -56,6 +56,26 @@
 			"UI_GROUP" : "Flight"
 		},
 		{
+			"DEFAULT" : 7,
+			"DESCRIPTION" : "Number of blocks between boulevard streets. Every N blocks, a wider street divides the city into chunks.",
+			"MAX" : 15,
+			"MIN" : 3,
+			"NAME" : "chunk_size",
+			"PARAMS" : 1,
+			"TYPE" : "slider",
+			"UI_GROUP" : "Visual"
+		},
+		{
+			"DEFAULT" : 2.0,
+			"DESCRIPTION" : "How much wider boulevard streets are relative to normal streets (1 = same width, 3 = maximum before buildings overlap).",
+			"MAX" : 3.0,
+			"MIN" : 1.0,
+			"NAME" : "blvd_width",
+			"PARAMS" : 0.1,
+			"TYPE" : "slider smooth",
+			"UI_GROUP" : "Visual"
+		},
+		{
 			"DEFAULT" : 0.0375,
 			"DESCRIPTION" : "Fraction of taller buildings that grow spectrum-analyzer antennas (0 = none, 1 = all tall buildings).",
 			"MAX" : 1,
