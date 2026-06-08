@@ -58,15 +58,15 @@ function update(dt) {
 
         // ---- Pitch ----
         pitchIdleTime = Math.abs(pr) < 0.05 ? pitchIdleTime + dt : 0.0;
-        warpPitch += pr * 1.2 * dt;
+        warpPitch -= pr * 3.0 * dt;
         warpPitch = Math.max(-1.0, Math.min(1.0, warpPitch));
-        if (pitchIdleTime > 1.5) warpPitch += (0.0 - warpPitch) * 0.5 * dt;
+        if (pitchIdleTime > 0.6) warpPitch += (0.0 - warpPitch) * 2.5 * dt;
 
         // ---- Yaw ----
         yawIdleTime = Math.abs(yr) < 0.05 ? yawIdleTime + dt : 0.0;
-        warpYaw += yr * 1.2 * dt;
+        warpYaw -= yr * 3.0 * dt;
         warpYaw = Math.max(-1.0, Math.min(1.0, warpYaw));
-        if (yawIdleTime > 1.5) warpYaw += (0.0 - warpYaw) * 0.5 * dt;
+        if (yawIdleTime > 0.6) warpYaw += (0.0 - warpYaw) * 2.5 * dt;
 
         // ---- Roll ----
         rollIdleTime = Math.abs(rr) < 0.05 ? rollIdleTime + dt : 0.0;
