@@ -145,7 +145,7 @@ bool sphereDisc(vec3 rd, vec3 dir, float angR, out vec3 N, out vec2 disc) {
     vec3 perp  = rd - md * dir;
     disc = vec2(dot(perp, right), dot(perp, up)) / sin(angR);
     float zN = sqrt(max(0.0, 1.0 - dot(disc, disc)));
-    N = normalize(disc.x * right + disc.y * up + zN * dir);
+    N = normalize(-(disc.x * right + disc.y * up + zN * dir));
     return true;
 }
 
@@ -167,14 +167,16 @@ vec3 addCelestialBodies(vec3 sky, vec3 rd) {
     // --- Glow halos (additive, drawn before opaque discs) ---
     float md, sin2;
 
+    // Sun glow — tight inner corona + wide diffuse halo
     md = dot(rd, gpDir);    sin2 = max(0.0, 1.0 - md * md);
-    sky += vec3(0.90, 0.68, 0.35) * exp(-sin2 / (gpR   * gpR   * 25.0)) * 2.2;
+    sky += vec3(1.00, 0.88, 0.50) * exp(-sin2 / (gpR * gpR * 18.0)) * 0.9;
+    sky += vec3(0.90, 0.70, 0.35) * exp(-sin2 / (gpR * gpR * 55.0)) * 0.35;
 
     md = dot(rd, moonADir); sin2 = max(0.0, 1.0 - md * md);
-    sky += vec3(0.60, 0.68, 0.90) * exp(-sin2 / (moonAR * moonAR * 20.0)) * 1.0;
+    sky += vec3(0.90, 0.65, 0.28) * exp(-sin2 / (moonAR * moonAR * 20.0)) * 0.4;
 
     md = dot(rd, moonBDir); sin2 = max(0.0, 1.0 - md * md);
-    sky += vec3(0.80, 0.45, 0.20) * exp(-sin2 / (moonBR * moonBR * 20.0)) * 0.7;
+    sky += vec3(0.92, 0.58, 0.18) * exp(-sin2 / (moonBR * moonBR * 20.0)) * 0.25;
 
     // --- Opaque discs (replace sky inside disc) ---
     vec3  N    = vec3(0.0);
@@ -182,29 +184,26 @@ vec3 addCelestialBodies(vec3 sky, vec3 rd) {
     float lit, grain, bands;
     vec3  col;
 
-    // Gas planet
+    // Sun disc — self-luminous with limb darkening
     if (sphereDisc(rd, gpDir, gpR, N, disc)) {
-        lit   = clamp(dot(N, SUN_DIR) * 1.5 - 0.1, 0.0, 1.0);
-        bands = clamp(sin(disc.y * 10.0) * 0.5 + 0.5
-                    + sin(disc.y * 27.0 + 0.5) * 0.15, 0.0, 1.0);
-        col   = mix(vec3(0.84, 0.66, 0.38), vec3(0.58, 0.40, 0.26), bands);
-        sky   = mix(col * 0.06, col, lit);
+        float r = sqrt(dot(disc, disc));             // 0 at center, 1 at limb
+        sky = mix(vec3(1.0, 0.95, 0.72), vec3(0.92, 0.62, 0.25), r * r);
     }
 
-    // Moon A — grey-blue
+    // Moon A — orange-tan
     if (sphereDisc(rd, moonADir, moonAR, N, disc)) {
         lit   = clamp(dot(N, SUN_DIR), 0.0, 1.0);
         grain = fract(sin(dot(floor(disc * 7.0 + 1.1), vec2(127.1, 311.7))) * 43758.5);
-        col   = vec3(0.52, 0.56, 0.64) * (0.82 + grain * 0.18);
-        sky   = mix(col * vec3(0.05, 0.07, 0.13), col, lit);
+        col   = vec3(0.84, 0.58, 0.28) * (0.82 + grain * 0.18);
+        sky   = mix(col * vec3(0.06, 0.04, 0.01), col, lit);
     }
 
-    // Moon B — rust-red
+    // Moon B — bright amber
     if (sphereDisc(rd, moonBDir, moonBR, N, disc)) {
         lit   = clamp(dot(N, SUN_DIR), 0.0, 1.0);
         grain = fract(sin(dot(floor(disc * 5.0 + 2.3), vec2(269.5, 83.3))) * 43758.5);
-        col   = vec3(0.64, 0.36, 0.20) * (0.80 + grain * 0.20);
-        sky   = mix(col * vec3(0.06, 0.04, 0.02), col, lit);
+        col   = vec3(0.90, 0.65, 0.22) * (0.80 + grain * 0.20);
+        sky   = mix(col * vec3(0.07, 0.04, 0.01), col, lit);
     }
 
     return sky;
@@ -233,9 +232,9 @@ vec3 forestSky(vec3 rd, float sunDot) {
     }
 
     float sunDisc = smoothstep(0.9994, 0.9998, sunDot);
-    float sunGlow = pow(max(sunDot, 0.0), 64.0) * 0.40
-                  + pow(max(sunDot, 0.0), 10.0) * 0.08;
-    sky += SUN_COL * (sunDisc * 2.5 + sunGlow);
+    float sunGlow = pow(max(sunDot, 0.0), 64.0) * 0.22
+                  + pow(max(sunDot, 0.0), 10.0) * 0.05;
+    sky += vec3(0.72, 0.15, 0.05) * (sunDisc * 1.4 + sunGlow);
 
     return sky;
 }

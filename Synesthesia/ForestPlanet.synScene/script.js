@@ -15,9 +15,9 @@ var cam = (function(opts) {
     var camZ  = opts.startZ != null ? opts.startZ : 0.0;
     var snapX = opts.snapXOnRecenter || false;
 
-    var camRight = [1, 0, 0];
-    var camUp    = [0, 1, 0];
-    var camFwd   = [0, 0, 1];
+    var camRight = [-0.9777, 0,  0.2096];
+    var camUp    = [ 0,     1,  0     ];
+    var camFwd   = [-0.2096, 0, -0.9777];
 
     var rollIdleTime     = 0.0;
     var pitchIdleTime    = 0.0;
