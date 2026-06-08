@@ -22,7 +22,7 @@
 		{
 			"DEFAULT" : 0.8,
 			"DESCRIPTION" : "Warp animation speed — higher values spin the tunnel faster.",
-			"MAX" : 3,
+			"MAX" : 4.5,
 			"MIN" : 0.1,
 			"NAME" : "fly_speed",
 			"TYPE" : "slider",

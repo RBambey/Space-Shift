@@ -22,7 +22,7 @@
 		{
 			"DEFAULT" : 20,
 			"DESCRIPTION" : "Forward flight speed in units per second.",
-			"MAX" : 60,
+			"MAX" : 90,
 			"MIN" : 3,
 			"NAME" : "fly_speed",
 			"TYPE" : "slider",

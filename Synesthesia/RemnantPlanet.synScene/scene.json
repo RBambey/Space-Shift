@@ -22,7 +22,7 @@
 		{
 			"DEFAULT" : 0.3,
 			"DESCRIPTION" : "Forward flight speed in units per second. The fractal is small — keep this low (0.05–0.4) to stay inside.",
-			"MAX" : 1,
+			"MAX" : 1.5,
 			"MIN" : 0.01,
 			"NAME" : "fly_speed",
 			"TYPE" : "slider",

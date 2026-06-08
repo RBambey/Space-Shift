@@ -22,7 +22,7 @@
 		{
 			"DEFAULT" : 4.5,
 			"DESCRIPTION" : "Forward flight speed through the tunnel.",
-			"MAX" : 15,
+			"MAX" : 22.5,
 			"MIN" : 0.5,
 			"NAME" : "fly_speed",
 			"TYPE" : "slider",

@@ -22,7 +22,7 @@
 		{
 			"DEFAULT" : 0.1,
 			"DESCRIPTION" : "Forward flight speed in units per second. The fractal repeats every 6 units.",
-			"MAX" : 5.0,
+			"MAX" : 7.5,
 			"MIN" : 0.05,
 			"NAME" : "fly_speed",
 			"TYPE" : "slider",
