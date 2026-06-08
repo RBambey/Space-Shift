@@ -124,18 +124,8 @@ float tickTime(float t){ return t*2. + tick(t, 4.)*.25; }
 
 
 // Camera movement. Adapted from NuSan's example.
+// (auto_camera removed — flight is now driven by warp_pitch/yaw/roll from script.js)
 void cam(inout vec3 p, float tm, float tTime) {
-  
-    if (auto_camera > 0.5) {
-        // p.xy *= r2(tm/4.);
-        // p.xz *= r2(tm/2.);
-    
-        // #ifdef CAM_SWING
-  	     p.xz *= r2(sin(syn_Time*0.15*.3)*.4);
-  	     p.xy *= r2(sin(syn_Time*0.15*.1)*2.);
-        // #endif
-    }
-
 }
 
 vec3 rotateX(vec3 p, float angle)
