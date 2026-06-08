@@ -56,7 +56,7 @@
 			"UI_GROUP" : "Flight"
 		},
 		{
-			"DEFAULT" : 0.3,
+			"DEFAULT" : 0.0375,
 			"DESCRIPTION" : "Fraction of taller buildings that grow spectrum-analyzer antennas (0 = none, 1 = all tall buildings).",
 			"MAX" : 1,
 			"MIN" : 0,
