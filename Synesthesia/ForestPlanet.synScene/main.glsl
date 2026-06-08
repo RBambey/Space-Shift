@@ -12,6 +12,12 @@
 
 const float TREE_SCALE = 8.0;
 
+vec3 hsv2rgb(vec3 c) {
+    vec4 K = vec4(1.0, 2.0/3.0, 1.0/3.0, 3.0);
+    vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
+    return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+}
+
 const vec3 SUN_DIR = vec3(0.578, 0.180, 0.796);
 const vec3 SUN_COL = vec3(1.0, 0.82, 0.52);
 
@@ -39,11 +45,13 @@ float DE(vec3 p0) {
     float h2 = fract(sin(tx * 269.5  + tz *  83.3 ) * 43758.5453);
     float h3 = fract(sin(tx *  12.9  + tz *  78.23) * 43758.5453);
     float h4 = fract(sin(tx * 173.6  + tz * 153.9 ) * 43758.5453);
+    float h5 = fract(sin(tx *  47.3  + tz * 231.7 ) * 43758.5453);
 
     float rnd    = tree_density - 0.5 + h1 * 2.5;
     float yStep  = 0.26 + h2 * 0.38;
     float splay  = 0.10 + h3 * 0.44;
-    float hScale = h4 > 0.5 ? 0.5 : 1.0;
+    float hScale = h4 < 0.25 ? 0.5 : (h4 < 0.5 ? 1.0 : (h4 < 0.75 ? 1.5 : 2.0));
+    float trunkW = 1.0 + h5 * 3.0;   // trunk width multiplier: 1× to 4×
 
     float dy = wind_strength * 0.2 * clamp(p.y + 0.4, 0.0, 1.0);
     p += sin(p.zxy + 2.0 * sin(p.yzx)) * dy;
@@ -55,7 +63,9 @@ float DE(vec3 p0) {
     p.xz  = mod(p.xz, 2.0) - 1.0;
     p.xz  = abs(p.xz);
     { float sy = clamp(p.y, -1.0, 1.0); p.xz -= sy * sy * splay; }
-    d     = reed(p, dr);
+    vec3 pt = p;
+    pt.xz /= trunkW;
+    d     = reed(pt, dr);
 
     for (int i = 0; i < 2; i++) {
         if (float(i) > rnd) break;
@@ -122,12 +132,92 @@ float cloudFBM(vec2 p) {
     return v;
 }
 
+// ---- Celestial bodies --------------------------------------------------
+
+// Returns true if ray rd hits a disc centered on dir with angular radius angR.
+// Outputs sphere surface normal N and normalised 2D disc position ([-1,1] each axis).
+bool sphereDisc(vec3 rd, vec3 dir, float angR, out vec3 N, out vec2 disc) {
+    float md = dot(rd, dir);
+    if (md < cos(angR)) return false;
+    vec3 ref   = abs(dir.y) < 0.99 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0);
+    vec3 right = normalize(cross(ref, dir));
+    vec3 up    = cross(dir, right);
+    vec3 perp  = rd - md * dir;
+    disc = vec2(dot(perp, right), dot(perp, up)) / sin(angR);
+    float zN = sqrt(max(0.0, 1.0 - dot(disc, disc)));
+    N = normalize(disc.x * right + disc.y * up + zN * dir);
+    return true;
+}
+
+vec3 addCelestialBodies(vec3 sky, vec3 rd) {
+    // Gas planet — low near horizon
+    vec3  gpDir = normalize(vec3(-0.15, 0.18, -0.70));
+    float gpR   = 0.11;
+
+    // Orthonormal frame around planet for orbital math
+    vec3 gpRight = normalize(cross(vec3(0.0, 1.0, 0.0), gpDir));
+    vec3 gpUp    = cross(gpDir, gpRight);
+
+    // Moon positions — orbit the planet, animated with TIME
+    vec3  moonADir = normalize(gpDir + 0.21 * (cos(TIME * 0.08)       * gpRight + sin(TIME * 0.08)       * gpUp));
+    vec3  moonBDir = normalize(gpDir + 0.14 * (cos(TIME * 0.15 + 1.9) * gpRight + sin(TIME * 0.15 + 1.9) * gpUp));
+    float moonAR   = 0.038;
+    float moonBR   = 0.018;
+
+    // --- Glow halos (additive, drawn before opaque discs) ---
+    float md, sin2;
+
+    md = dot(rd, gpDir);    sin2 = max(0.0, 1.0 - md * md);
+    sky += vec3(0.90, 0.68, 0.35) * exp(-sin2 / (gpR   * gpR   * 25.0)) * 2.2;
+
+    md = dot(rd, moonADir); sin2 = max(0.0, 1.0 - md * md);
+    sky += vec3(0.60, 0.68, 0.90) * exp(-sin2 / (moonAR * moonAR * 20.0)) * 1.0;
+
+    md = dot(rd, moonBDir); sin2 = max(0.0, 1.0 - md * md);
+    sky += vec3(0.80, 0.45, 0.20) * exp(-sin2 / (moonBR * moonBR * 20.0)) * 0.7;
+
+    // --- Opaque discs (replace sky inside disc) ---
+    vec3  N    = vec3(0.0);
+    vec2  disc = vec2(0.0);
+    float lit, grain, bands;
+    vec3  col;
+
+    // Gas planet
+    if (sphereDisc(rd, gpDir, gpR, N, disc)) {
+        lit   = clamp(dot(N, SUN_DIR) * 1.5 - 0.1, 0.0, 1.0);
+        bands = clamp(sin(disc.y * 10.0) * 0.5 + 0.5
+                    + sin(disc.y * 27.0 + 0.5) * 0.15, 0.0, 1.0);
+        col   = mix(vec3(0.84, 0.66, 0.38), vec3(0.58, 0.40, 0.26), bands);
+        sky   = mix(col * 0.06, col, lit);
+    }
+
+    // Moon A — grey-blue
+    if (sphereDisc(rd, moonADir, moonAR, N, disc)) {
+        lit   = clamp(dot(N, SUN_DIR), 0.0, 1.0);
+        grain = fract(sin(dot(floor(disc * 7.0 + 1.1), vec2(127.1, 311.7))) * 43758.5);
+        col   = vec3(0.52, 0.56, 0.64) * (0.82 + grain * 0.18);
+        sky   = mix(col * vec3(0.05, 0.07, 0.13), col, lit);
+    }
+
+    // Moon B — rust-red
+    if (sphereDisc(rd, moonBDir, moonBR, N, disc)) {
+        lit   = clamp(dot(N, SUN_DIR), 0.0, 1.0);
+        grain = fract(sin(dot(floor(disc * 5.0 + 2.3), vec2(269.5, 83.3))) * 43758.5);
+        col   = vec3(0.64, 0.36, 0.20) * (0.80 + grain * 0.20);
+        sky   = mix(col * vec3(0.06, 0.04, 0.02), col, lit);
+    }
+
+    return sky;
+}
+
 // ---- Sky ---------------------------------------------------------------
 
 vec3 forestSky(vec3 rd, float sunDot) {
     float y   = clamp(rd.y, 0.0, 1.0);
     vec3  sky = mix(vec3(0.08, 0.22, 0.80), vec3(0.03, 0.08, 0.88), pow(y, 0.55));
     sky = mix(sky, vec3(0.72, 0.60, 0.22), exp(-abs(rd.y) * 8.0) * 0.20);
+
+    sky = addCelestialBodies(sky, rd);
 
     if (rd.y > 0.12) {
         float tCloud = max(80.0 - cam_y, 1.0) / rd.y;
@@ -243,10 +333,18 @@ vec4 renderMain() {
         float topFace  = smoothstep(0.0, 0.7, N.y);
         float isGround = smoothstep(0.12, 0.0, localY) * topFace;
 
+        // Per-tree hue: same tile coords as DE so color is stable per tree
+        float tx_c    = floor(p.x / (TREE_SCALE * 2.0));
+        float tz_c    = floor(p.z / (TREE_SCALE * 2.0));
+        float treeHue = fract(sin(tx_c * 127.1 + tz_c * 311.7) * 43758.5453);
+        vec3  treeBase = hsv2rgb(vec3(treeHue, 0.72, 0.42));
+        vec3  treeMid  = hsv2rgb(vec3(treeHue, 0.65, 0.58));
+        vec3  treeTop  = hsv2rgb(vec3(treeHue, 0.55, 0.82));
+
         // Material: bark / leaves / ground moss
         vec3 baseCol = mix(
-            mix(vec3(0.06, 0.52, 0.05),
-                mix(vec3(0.10, 0.65, 0.08), vec3(0.22, 0.98, 0.08), topFace),
+            mix(treeBase,
+                mix(treeMid, treeTop, topFace),
                 topFace * 0.6),
             vec3(0.06, 0.52, 0.05),
             isGround);
