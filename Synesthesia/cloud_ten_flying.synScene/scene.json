@@ -1,0 +1,154 @@
+{
+	"CONTROLS" :
+	[
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "Trigger a complete barrel roll.",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "barrel_roll",
+			"TYPE" : "bang",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "Smoothly return to level flight.",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "recenter",
+			"TYPE" : "bang",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 30,
+			"DESCRIPTION" : "Forward flight speed.",
+			"MAX" : 200,
+			"MIN" : 5,
+			"NAME" : "fly_speed",
+			"TYPE" : "slider",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "Nose up/down.",
+			"MAX" : 1,
+			"MIN" : -1,
+			"NAME" : "pitch",
+			"TYPE" : "slider",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "Roll left/right.",
+			"MAX" : 1,
+			"MIN" : -1,
+			"NAME" : "roll_rate",
+			"TYPE" : "slider",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "Yaw left/right.",
+			"MAX" : 1,
+			"MIN" : -1,
+			"NAME" : "yaw_rate",
+			"TYPE" : "slider",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "Flip entire scene over, turning it from a city to a starry sky, and from flying over clouds to under water.",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "flip_side",
+			"TYPE" : "toggle",
+			"UI_GROUP" : "Visual"
+		},
+		{
+			"DEFAULT" : 0.5,
+			"DESCRIPTION" : "Change sun height in sky, resulting in deeper red sunset or white light from a high sun position.",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "sun_position",
+			"PARAMS" : 0.05,
+			"TYPE" : "slider smooth",
+			"UI_GROUP" : "Visual"
+		},
+		{
+			"DEFAULT" : 1,
+			"DESCRIPTION" : "Turn OFF to stop the generation of the city/stars and preserve FPS.",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "city_fps",
+			"PARAMS" : 0.05,
+			"TYPE" : "toggle smooth",
+			"UI_GROUP" : "Visual"
+		},
+		{
+			"DEFAULT" : 0.5,
+			"DESCRIPTION" : "Strength of city lights pulse on bass hits.",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "bass_city",
+			"PARAMS" : 0.05,
+			"TYPE" : "slider smooth",
+			"UI_GROUP" : "Audio"
+		},
+		{
+			"DEFAULT" : 0.5,
+			"DESCRIPTION" : "Strength of sun corona swell on mid notes.",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "mid_glow",
+			"PARAMS" : 0.05,
+			"TYPE" : "slider smooth",
+			"UI_GROUP" : "Audio"
+		}
+	],
+	"CREDIT" : "nimitz",
+	"DESCRIPTION" : "",
+	"GPU" : 3,
+	"HEIGHT" : 1080,
+	"IMAGES" :
+	[
+		{
+			"NAME" : "colornoise",
+			"PATH" : "./images/colornoise.jpg"
+		}
+	],
+	"IMAGE_PATH" : "cloud_ten_dup.png",
+	"MEDIA" :
+	[
+		{
+			"FILTER" : "linear",
+			"WRAP" : "repeat"
+		}
+	],
+	"PASSES" :
+	[
+		{
+			"FILTER" : "linear",
+			"FLOAT" : true,
+			"HEIGHT" : 360,
+			"TARGET" : "buffer1",
+			"WIDTH" : 640,
+			"WRAP" : "repeat"
+		},
+		{
+			"FILTER" : "linear",
+			"FLOAT" : true,
+			"HEIGHT" : 1280,
+			"TARGET" : "cityClouds",
+			"WIDTH" : 1920,
+			"WRAP" : "repeat"
+		}
+	],
+	"TAGS" :
+	[
+		"3d",
+		"raymarching",
+		"realistic"
+	],
+	"TITLE" : "Cloud Ten_dup",
+	"WIDTH" : 1920
+}
