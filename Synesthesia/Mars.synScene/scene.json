@@ -143,8 +143,8 @@
 			"UI_GROUP" : "Visual"
 		},
 		{
-			"DEFAULT" : 0.5,
-			"DESCRIPTION" : "How strongly bass pulses the diffuse lighting.",
+			"DEFAULT" : 0.6,
+			"DESCRIPTION" : "How strongly bass pulses the sunlight: diffuse intensity, specular highlights, and horizon scatter.",
 			"MAX" : 1,
 			"MIN" : 0,
 			"NAME" : "bass_reactivity",

@@ -235,6 +235,11 @@ vec4 renderMain() {
     vec3 bg    = stars(rd) * (1.0 - clamp(dot(scatt, vec3(1.3)), 0.0, 1.0));
     vec3 col   = bg;
 
+    // Bass-driven sun pulse (power curve for snappier transient response)
+    float bassRaw   = clamp(syn_BassLevel, 0.0, 1.0);
+    float bassPulse = pow(bassRaw, 1.5) * bass_reactivity;
+    float sunPulse  = 1.0 + bassPulse * 3.0;
+
     // --- Trace ---
     vec3  p;
     float t = heightMapTracing(ro, rd, p);
@@ -251,16 +256,15 @@ vec4 renderMain() {
         float spe  = pow(clamp(dot(reflect(rd, n), lgt), 0.0, 1.0), 500.0);
         float fre  = pow(clamp(1.0 + dot(n, rd), 0.0, 1.0), 2.0);
 
-        float bassAmt = syn_BassLevel * bass_reactivity;
-        vec3  brdf    = amb * vec3(0.10, 0.08, 0.07);
+        vec3  brdf = amb * vec3(0.10, 0.08, 0.07);
         brdf += bac * vec3(0.18, 0.06, 0.04);
-        brdf += (2.3 + bassAmt * 0.8) * dif * vec3(0.85, 0.28, 0.17);
+        brdf += 2.3 * sunPulse * dif * vec3(0.85, 0.28, 0.17);
 
         col = vec3(0.32, 0.17, 0.11);
         float crv  = curv(p, 2.0);
         float crv2 = curv(p, 0.4) * 2.5;
         col += clamp(crv * 0.9, -1.0, 1.0) * vec3(0.28, 0.18, 0.10);
-        col  = col * brdf + col * spe * 0.1 + 0.1 * fre * col;
+        col  = col * brdf + col * spe * (0.1 + bassPulse * 0.5) + 0.1 * fre * col;
         col *= crv  * 1.0 + 1.0;
         col *= crv2 * 1.0 + 1.0;
     }
@@ -268,7 +272,7 @@ vec4 renderMain() {
     // --- Atmosphere ---
     col  = fog(ro, rd, col, t, lgt);
     col  = mix(col, bg, smoothstep(draw_distance - 150.0, draw_distance, t));
-    col += scatt;
+    col += scatt * (1.0 + bassPulse * 0.8);
 
     // --- Horizon mountains (angular-space backdrop, never reachable) ---
     if (t >= draw_distance) {
