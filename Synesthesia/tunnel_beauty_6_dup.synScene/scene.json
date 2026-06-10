@@ -1,0 +1,171 @@
+{
+	"CONTROLS" :
+	[
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "Trigger a complete barrel roll.",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "barrel_roll",
+			"TYPE" : "bang",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "Smoothly return to centre view.",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "recenter",
+			"TYPE" : "bang",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 0.8,
+			"DESCRIPTION" : "Tunnel travel speed.",
+			"MAX" : 4.5,
+			"MIN" : 0.1,
+			"NAME" : "fly_speed",
+			"TYPE" : "slider",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "Tilt view up/down.",
+			"MAX" : 1,
+			"MIN" : -1,
+			"NAME" : "pitch",
+			"TYPE" : "slider",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "Roll the view.",
+			"MAX" : 1,
+			"MIN" : -1,
+			"NAME" : "roll_rate",
+			"TYPE" : "slider",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "Pan view left/right.",
+			"MAX" : 1,
+			"MIN" : -1,
+			"NAME" : "yaw_rate",
+			"TYPE" : "slider",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 0.35,
+			"DESCRIPTION" : "Diameter of the tunnel. Default: 35%.",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "diameter",
+			"PARAMS" : 0.1,
+			"TYPE" : "slider smooth",
+			"UI_GROUP" : "transforms"
+		},
+		{
+			"DEFAULT" : 1,
+			"DESCRIPTION" : "Change from a spiral to a flat cave.",
+			"MAX" : 0,
+			"MIN" : 1,
+			"NAME" : "flatten",
+			"PARAMS" : 0.01,
+			"TYPE" : "slider smooth",
+			"UI_GROUP" : "transforms"
+		},
+		{
+			"DEFAULT" : 1,
+			"DESCRIPTION" : "Fewer ridges. Also clears up noise when tunnel diameter is widest.",
+			"MAX" : 0,
+			"MIN" : 1,
+			"NAME" : "simplify",
+			"PARAMS" : 0.01,
+			"TYPE" : "slider smooth",
+			"UI_GROUP" : "transforms"
+		},
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "Modifies the rotation ridges, can give you noise if you aren't careful.",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "churner",
+			"TYPE" : "slider",
+			"UI_GROUP" : "transforms"
+		},
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "Field of View for the camera, a sort of zoom. Default 20%.",
+			"MAX" : 2.7,
+			"MIN" : -0.9,
+			"NAME" : "fov_in",
+			"PARAMS" : 0.05,
+			"TYPE" : "slider smooth",
+			"UI_GROUP" : "camera"
+		},
+		{
+			"DEFAULT" : 0.3,
+			"DESCRIPTION" : "Scene fully lit up, or fully dark and flashing.",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "col_presence",
+			"PARAMS" : 0.2,
+			"TYPE" : "slider smooth",
+			"UI_GROUP" : "color"
+		},
+		{
+			"DEFAULT" : 0.001,
+			"DESCRIPTION" : "Earthy color scheme, or move up for deeper, more complex colors.",
+			"MAX" : 2,
+			"MIN" : 0.001,
+			"NAME" : "deeper_colors",
+			"PARAMS" : 0.01,
+			"TYPE" : "slider smooth",
+			"UI_GROUP" : "color"
+		},
+		{
+			"DEFAULT" : 0.2,
+			"DESCRIPTION" : "Media must be on! Defines how much of the tunnel the media covers.",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "media_width",
+			"PARAMS" : 0.2,
+			"TYPE" : "slider smooth",
+			"UI_GROUP" : "color"
+		}
+	],
+	"CREDIT" : "aiekick",
+	"DESCRIPTION" : "i have the limit of the float after a certain time, and some noise appears :)\nyou can increase the iteration at line 86 to have better shape but more slow too :) ",
+	"GPU" : 3,
+	"HEIGHT" : 1080,
+	"IMAGE_PATH" : "tunnel_beauty_6_dup.png",
+	"MEDIA" :
+	[
+		{
+			"FILTER" : "linear",
+			"WRAP" : "repeat"
+		}
+	],
+	"PASSES" :
+	[
+		{
+			"FILTER" : "linear",
+			"FLOAT" : true,
+			"HEIGHT" : 360,
+			"TARGET" : "toFilter",
+			"WIDTH" : 640,
+			"WRAP" : "repeat"
+		}
+	],
+	"TAGS" :
+	[
+		"3d",
+		"raymarching",
+		"tunnel",
+		"colorful",
+		"central"
+	],
+	"TITLE" : "Tunnel Beauty 6_dup",
+	"WIDTH" : 1920
+}
