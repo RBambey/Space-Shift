@@ -64,7 +64,7 @@ function update(dt) {
 
         // ---- Pitch ----
         pitchIdleTime = Math.abs(pr) < 0.05 ? pitchIdleTime + dt : 0.0;
-        warpPitch += pr * 3.0 * dt;
+        warpPitch -= pr * 3.0 * dt;
         warpPitch = Math.max(-1.0, Math.min(1.0, warpPitch));
         if (pitchIdleTime > 0.6) warpPitch += (0.0 - warpPitch) * 2.5 * dt;
 
