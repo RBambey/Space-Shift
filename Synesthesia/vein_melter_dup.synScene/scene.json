@@ -1,0 +1,319 @@
+{
+	"CONTROLS" :
+	[
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "Trigger a complete barrel roll.",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "barrel_roll",
+			"TYPE" : "bang",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "Smoothly return to centre view.",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "recenter",
+			"TYPE" : "bang",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 0.8,
+			"DESCRIPTION" : "Tunnel travel speed.",
+			"MAX" : 4.5,
+			"MIN" : 0.1,
+			"NAME" : "fly_speed",
+			"TYPE" : "slider",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 0.6,
+			"DESCRIPTION" : "How much bass flashes the tunnel color.",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "bass_impact",
+			"PARAMS" : 0.05,
+			"TYPE" : "slider smooth",
+			"UI_GROUP" : "coloration"
+		},
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "Tilt view up/down.",
+			"MAX" : 1,
+			"MIN" : -1,
+			"NAME" : "pitch",
+			"TYPE" : "slider",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "Roll the view.",
+			"MAX" : 1,
+			"MIN" : -1,
+			"NAME" : "roll_rate",
+			"TYPE" : "slider",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "Pan view left/right.",
+			"MAX" : 1,
+			"MIN" : -1,
+			"NAME" : "yaw_rate",
+			"TYPE" : "slider",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "Sends a pulse outward from the center, leaving a dark hole in the middle of the screen after it passes.",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "pulse_out",
+			"PARAMS" : 0.005,
+			"TYPE" : "bang smooth",
+			"UI_GROUP" : "simulation"
+		},
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "Sends a pulse through all the veins on screen at once, changing and rotating their shape.",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "full_pulse",
+			"PARAMS" : 0.1,
+			"TYPE" : "bang smooth",
+			"UI_GROUP" : "simulation"
+		},
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "When on, pulls all the veins backwards, making it much more minimal/amorphous.",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "retract",
+			"TYPE" : "toggle",
+			"UI_GROUP" : "simulation"
+		},
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "When on, devolves into a sort of random chaos of ripples and bursts.",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "devolve",
+			"TYPE" : "toggle",
+			"UI_GROUP" : "simulation"
+		},
+		{
+			"DEFAULT" : 0.2,
+			"DESCRIPTION" : "Heartbeat, or breathing, that oscillates in and out every other bar. This affects the intensity.",
+			"MAX" : 0.5,
+			"MIN" : 0.1,
+			"NAME" : "heartbeat_intensity",
+			"PARAMS" : 0.1,
+			"TYPE" : "slider smooth",
+			"UI_GROUP" : "simulation"
+		},
+		{
+			"DEFAULT" : 4,
+			"DESCRIPTION" : "Select from one of 5 color palettes. From bottom to top: Blood, Firey Orange/Blue, Green Forest, Blue Sky, Black/White.",
+			"MAX" : 0,
+			"MIN" : 4,
+			"NAME" : "color_palette",
+			"PARAMS" : 0.1,
+			"TYPE" : "slider smooth",
+			"UI_GROUP" : "coloration"
+		},
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "50% is default: no melting up or down. Move up to melt up and in, down to melt down and out.",
+			"MAX" : 1.5,
+			"MIN" : -1.5,
+			"NAME" : "melt_up_or_down",
+			"PARAMS" : 0.1,
+			"TYPE" : "slider smooth",
+			"UI_GROUP" : "distortion"
+		},
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "50% is default no zooming. Move up to zoom in, down to zoom out.",
+			"MAX" : 1.5,
+			"MIN" : -1.5,
+			"NAME" : "zooming",
+			"PARAMS" : 0.1,
+			"TYPE" : "slider smooth",
+			"UI_GROUP" : "distortion"
+		},
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "When ON, paint1 is enabled. Audio-reactive paintbrush that drips extra fluid onto the simulation.",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "paint1_on",
+			"TYPE" : "toggle",
+			"UI_GROUP" : "paint1"
+		},
+		{
+			"DEFAULT" : 
+			[
+				0,
+				0
+			],
+			"DESCRIPTION" : "Mirrored painting for better effect.",
+			"MAX" : 
+			[
+				1,
+				1
+			],
+			"MIN" : 
+			[
+				-1,
+				-1
+			],
+			"NAME" : "paint1XY",
+			"PARAMS" : 0.025,
+			"TYPE" : "xy smooth",
+			"UI_GROUP" : "paint1"
+		},
+		{
+			"DEFAULT" : 1,
+			"DESCRIPTION" : "Size & intensity of the effect for paint1.",
+			"MAX" : 0.3,
+			"MIN" : 2,
+			"NAME" : "brush_size1",
+			"PARAMS" : 0.1,
+			"TYPE" : "slider smooth",
+			"UI_GROUP" : "paint1"
+		},
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "When ON, paint2 is enabled. Pulls around the simulation like a dipping your finger into liquid.",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "paint2_on",
+			"TYPE" : "toggle",
+			"UI_GROUP" : "paint2"
+		},
+		{
+			"DEFAULT" : 
+			[
+				0,
+				0
+			],
+			"DESCRIPTION" : "Mirrored painting, but also TWO KINDS of brushes in one XY pad. On left half of the pad = a wide brush. Right half = more simple circular brush.",
+			"MAX" : 
+			[
+				1,
+				1
+			],
+			"MIN" : 
+			[
+				-1,
+				-1
+			],
+			"NAME" : "paint2XY",
+			"PARAMS" : 0.025,
+			"TYPE" : "xy smooth",
+			"UI_GROUP" : "paint2"
+		},
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "Grabs a frame from the underlying media and resets the simulation based on the brightness.",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "grab_frame",
+			"TYPE" : "bang",
+			"UI_GROUP" : "media"
+		},
+		{
+			"DEFAULT" : 1,
+			"DESCRIPTION" : "100% is full opacity for the media effect, 0% is just the normal simulation, no media.",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "opacity",
+			"PARAMS" : 0.2,
+			"TYPE" : "slider smooth",
+			"UI_GROUP" : "media"
+		},
+		{
+			"DEFAULT" : 0.5,
+			"DESCRIPTION" : "Affects how much the video is refracted by the simulation.",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "refraction",
+			"PARAMS" : 0.1,
+			"TYPE" : "slider smooth",
+			"UI_GROUP" : "media"
+		},
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "When off, ignores the underlying 'color palette' and just uses the media. When on, multiplies the two.",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "combine_colors",
+			"TYPE" : "toggle",
+			"UI_GROUP" : "media"
+		},
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "Resets the simulation back to its initial state. The panic button when you don't like what is going on.",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "reset_sim",
+			"TYPE" : "bang",
+			"UI_GROUP" : "reset"
+		}
+	],
+	"CREDIT" : "cornusammonis",
+	"DESCRIPTION" : "A dendritic dynamical system. Click to paint.",
+	"GPU" : 4,
+	"HEIGHT" : 1080,
+	"IMAGES" : 
+	[
+		{
+			"NAME" : "image45",
+			"PATH" : "images/45.jpg"
+		},
+		{
+			"NAME" : "image16",
+			"PATH" : "images/16.png"
+		}
+	],
+	"IMAGE_PATH" : "vein_melter_dup.png",
+	"MEDIA" : 
+	[
+		{
+			"FILTER" : "linear",
+			"WRAP" : "repeat"
+		}
+	],
+	"PASSES" : 
+	[
+		{
+			"FILTER" : "linear",
+			"FLOAT" : true,
+			"HEIGHT" : 432,
+			"TARGET" : "BuffA",
+			"WIDTH" : 768,
+			"WRAP" : "repeat"
+		},
+		{
+			"FILTER" : "linear",
+			"FLOAT" : true,
+			"HEIGHT" : 432,
+			"TARGET" : "BuffA2",
+			"WIDTH" : 768,
+			"WRAP" : "repeat"
+		}
+	],
+	"TAGS" : 
+	[
+		"feedback",
+		"media",
+		"colorful",
+		"reaction-diffusion",
+		"fluid",
+		"simulation"
+	],
+	"TITLE" : "Vein Melter_dup",
+	"WIDTH" : 1920
+}
