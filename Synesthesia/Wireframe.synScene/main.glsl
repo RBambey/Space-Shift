@@ -68,17 +68,17 @@ float exteriorHeight(vec2 xz) {
                 + sin(xz.x * 0.037 + xz.y * 0.009 + 4.2) * 1.0;
 
     float mesa = 0.0;
-    vec2 mc = floor(xz / 380.0);
+    vec2 mc = floor(xz / 180.0);
     for (int mi = -1; mi <= 1; mi++) {
         for (int mj = -1; mj <= 1; mj++) {
             vec2  cell  = mc + vec2(float(mi), float(mj));
             float h     = fract(sin(dot(cell, vec2(127.1, 311.7))) * 43758.5453);
-            float mesaH = 5.0 + fract(h * 7.31) * 9.0;
-            float mesaR = 28.0 + fract(h * 3.17) * 22.0;
-            vec2  ctr   = (cell + vec2(fract(h * 4.71), fract(h * 9.13))) * 380.0;
+            float mesaH = 12.0 + fract(h * 7.31) * 10.0;
+            float mesaR = 40.0 + fract(h * 3.17) * 20.0;
+            vec2  ctr   = (cell + vec2(fract(h * 4.71), fract(h * 9.13))) * 180.0;
             float d2    = length(xz - ctr);
             // slope ≤ 0.45 keeps SDF Lipschitz safe; step() zeros cells without a mesa
-            mesa = max(mesa, min(0.45 * max(mesaR - d2, 0.0), mesaH) * step(0.58, h));
+            mesa = max(mesa, min(0.45 * max(mesaR - d2, 0.0), mesaH) * step(0.35, h));
         }
     }
 
@@ -175,14 +175,19 @@ float mountainEdge(vec3 rd) {
     if (rd.y < -0.02) return 0.0;
     vec2  rdHz = normalize(rd.xz + vec2(1e-5));
     float r    = 0.0;
-    // 7 peaks spread around 360° with varied heights and widths
-    r = max(r, onePeak(rdHz, rd.y,  0.45, 0.28, 0.30));
-    r = max(r, onePeak(rdHz, rd.y,  1.30, 0.17, 0.22));
-    r = max(r, onePeak(rdHz, rd.y,  2.20, 0.24, 0.28));
-    r = max(r, onePeak(rdHz, rd.y,  3.50, 0.20, 0.25));
-    r = max(r, onePeak(rdHz, rd.y, -2.50, 0.30, 0.32));
-    r = max(r, onePeak(rdHz, rd.y, -1.40, 0.15, 0.18));
-    r = max(r, onePeak(rdHz, rd.y, -0.30, 0.22, 0.26));
+    // 12 peaks evenly spaced at π/6 intervals — bases overlap to form a continuous range
+    r = max(r, onePeak(rdHz, rd.y,  0.000, 0.08, 0.35));
+    r = max(r, onePeak(rdHz, rd.y,  0.524, 0.06, 0.33));
+    r = max(r, onePeak(rdHz, rd.y,  1.047, 0.10, 0.36));
+    r = max(r, onePeak(rdHz, rd.y,  1.571, 0.05, 0.32));
+    r = max(r, onePeak(rdHz, rd.y,  2.094, 0.09, 0.35));
+    r = max(r, onePeak(rdHz, rd.y,  2.618, 0.07, 0.34));
+    r = max(r, onePeak(rdHz, rd.y,  3.142, 0.08, 0.36));
+    r = max(r, onePeak(rdHz, rd.y, -2.618, 0.06, 0.33));
+    r = max(r, onePeak(rdHz, rd.y, -2.094, 0.10, 0.35));
+    r = max(r, onePeak(rdHz, rd.y, -1.571, 0.05, 0.32));
+    r = max(r, onePeak(rdHz, rd.y, -1.047, 0.09, 0.36));
+    r = max(r, onePeak(rdHz, rd.y, -0.524, 0.07, 0.34));
     return r;
 }
 
