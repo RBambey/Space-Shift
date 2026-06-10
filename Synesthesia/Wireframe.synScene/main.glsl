@@ -59,6 +59,32 @@ vec2 wallVar(vec3 p) {
     return vec2(bL, bR);
 }
 
+// ---- Exterior terrain height (plateau + hills + sparse mesas) ----
+float exteriorHeight(vec2 xz) {
+    float base = floorHeight(xz) + wall_height;
+
+    float hills = sin(xz.x * 0.023 + xz.y * 0.018 + 1.1) * 3.0
+                + cos(xz.x * 0.014 + xz.y * 0.027 + 2.8) * 1.8
+                + sin(xz.x * 0.037 + xz.y * 0.009 + 4.2) * 1.0;
+
+    float mesa = 0.0;
+    vec2 mc = floor(xz / 380.0);
+    for (int mi = -1; mi <= 1; mi++) {
+        for (int mj = -1; mj <= 1; mj++) {
+            vec2  cell  = mc + vec2(float(mi), float(mj));
+            float h     = fract(sin(dot(cell, vec2(127.1, 311.7))) * 43758.5453);
+            float mesaH = 5.0 + fract(h * 7.31) * 9.0;
+            float mesaR = 28.0 + fract(h * 3.17) * 22.0;
+            vec2  ctr   = (cell + vec2(fract(h * 4.71), fract(h * 9.13))) * 380.0;
+            float d2    = length(xz - ctr);
+            // slope ≤ 0.45 keeps SDF Lipschitz safe; step() zeros cells without a mesa
+            mesa = max(mesa, min(0.45 * max(mesaR - d2, 0.0), mesaH) * step(0.58, h));
+        }
+    }
+
+    return base + hills + mesa;
+}
+
 // ---- Scene SDF ----
 float scene(vec3 p) {
     vec2  c   = path(p.z);
@@ -77,7 +103,7 @@ float scene(vec3 p) {
 
     float dCanyon = min(min(dL, dR), min(dF, dP));
     // Terrain cap — canyon carved from a finite-height landscape.
-    float dTe = p.y - (floorHeight(p.xz) + wall_height);
+    float dTe = p.y - exteriorHeight(p.xz);
     return max(dCanyon, dTe);
 }
 
@@ -104,9 +130,9 @@ vec3 wVertR(float zi, float yj) {
     return vec3(pc.x + hw - bR, yj, zi);
 }
 
-// Exterior terrain vertex — same (x,z) grid as floor but elevated by wall_height.
+// Exterior terrain vertex — uses exteriorHeight for hills + mesas.
 vec3 tVert(float xi, float zj) {
-    return vec3(xi, floorHeight(vec2(xi, zj)) + wall_height, zj);
+    return vec3(xi, exteriorHeight(vec2(xi, zj)), zj);
 }
 
 // ---- Min barycentric coordinate of p in triangle (v0,v1,v2) ----
@@ -120,6 +146,41 @@ float minBary(vec3 p, vec3 v0, vec3 v1, vec3 v2) {
     float bv  = (d11 * d20 - d01 * d21) / den;
     float bw  = (d00 * d21 - d01 * d20) / den;
     return max(min(1.0 - bv - bw, min(bv, bw)), 0.0);
+}
+
+// ---- Horizon mountains (billboard — fixed in ray-direction space) ----
+// Each peak is a 2D triangle in (signed-azimuth-offset, elevation) space.
+// da = 2D cross product of horizontal ray direction vs mountain direction ≈ sin(angle).
+float onePeak(vec2 rdHz, float rdY, float az, float elv, float hw) {
+    vec2  md  = vec2(sin(az), cos(az));
+    float da  = rdHz.x * md.y - rdHz.y * md.x;
+    vec2  vA  = vec2(-hw, 0.0), vB = vec2(hw, 0.0), vC = vec2(0.0, elv);
+    vec2  p2  = vec2(da, rdY);
+    vec2  e0  = vB - vA, e1 = vC - vA, ep = p2 - vA;
+    float d00 = dot(e0,e0), d01 = dot(e0,e1), d11 = dot(e1,e1);
+    float d20 = dot(ep,e0), d21 = dot(ep,e1);
+    float den = max(d00*d11 - d01*d01, 1e-8);
+    float bv  = (d11*d20 - d01*d21) / den;
+    float bw  = (d00*d21 - d01*d20) / den;
+    float b   = max(min(1.0 - bv - bw, min(bv, bw)), 0.0);
+    float fw  = 0.013;
+    float g   = (1.0 - smoothstep(fw*0.5, fw*2.5, b)) + exp(-b/(fw*5.0))*0.28;
+    return g * step(0.0, dot(rdHz, md));  // zero out if facing away from peak
+}
+
+float mountainEdge(vec3 rd) {
+    if (rd.y < -0.02) return 0.0;
+    vec2  rdHz = normalize(rd.xz + vec2(1e-5));
+    float r    = 0.0;
+    // 7 peaks spread around 360° with varied heights and widths
+    r = max(r, onePeak(rdHz, rd.y,  0.45, 0.28, 0.30));
+    r = max(r, onePeak(rdHz, rd.y,  1.30, 0.17, 0.22));
+    r = max(r, onePeak(rdHz, rd.y,  2.20, 0.24, 0.28));
+    r = max(r, onePeak(rdHz, rd.y,  3.50, 0.20, 0.25));
+    r = max(r, onePeak(rdHz, rd.y, -2.50, 0.30, 0.32));
+    r = max(r, onePeak(rdHz, rd.y, -1.40, 0.15, 0.18));
+    r = max(r, onePeak(rdHz, rd.y, -0.30, 0.22, 0.26));
+    return r;
 }
 
 vec4 renderMain() {
@@ -146,7 +207,10 @@ vec4 renderMain() {
         t += max(d * 0.75, 0.01);
     }
 
-    if (!hit) return vec4(bgCol, 1.0);
+    if (!hit) {
+        float mg = mountainEdge(rd);
+        return vec4(mix(bgCol, hue2rgb(wire_hue), clamp(mg, 0.0, 1.5)), 1.0);
+    }
 
     // ---- Identify hit surface ----
     vec3  p   = ro + rd * t;
@@ -157,7 +221,7 @@ vec4 renderMain() {
     float dL  =  px + hw - wv.x;
     float dR  = -px + hw - wv.y;
     float dF  = p.y - floorHeight(p.xz);
-    float dTe = p.y - (floorHeight(p.xz) + wall_height);
+    float dTe = p.y - exteriorHeight(p.xz);
 
     // ---- Find tessellated triangle + flat normal ----
     // dTe > min(dL,dR,dF) means terrain cap was the nearest surface.
