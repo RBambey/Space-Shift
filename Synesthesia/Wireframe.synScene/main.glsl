@@ -162,10 +162,13 @@ float onePeak(vec2 rdHz, float rdY, float az, float elv, float hw) {
     float den = max(d00*d11 - d01*d01, 1e-8);
     float bv  = (d11*d20 - d01*d21) / den;
     float bw  = (d00*d21 - d01*d20) / den;
-    float b   = max(min(1.0 - bv - bw, min(bv, bw)), 0.0);
+    // Signed: positive inside triangle, negative outside.
+    // Gaussian centered on 0 (the edge) — naturally zero far from the boundary,
+    // no clamping needed so outside pixels don't get falsely lit.
+    float sb  = min(1.0 - bv - bw, min(bv, bw));
     float fw  = 0.013;
-    float g   = (1.0 - smoothstep(fw*0.5, fw*2.5, b)) + exp(-b/(fw*5.0))*0.28;
-    return g * step(0.0, dot(rdHz, md));  // zero out if facing away from peak
+    float g   = exp(-(sb * sb) / (fw * fw * 2.0));
+    return g * step(0.0, dot(rdHz, md));
 }
 
 float mountainEdge(vec3 rd) {
