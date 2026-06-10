@@ -92,11 +92,11 @@
 			"UI_GROUP" : "Ocean"
 		},
 		{
-			"DEFAULT" : 0.75,
-			"DESCRIPTION" : "0 = dawn (pink/coral), 0.5 = midday (blue), 1 = dusk (amber/red).",
-			"MAX" : 1,
-			"MIN" : 0,
-			"NAME" : "sky_time",
+			"DEFAULT" : 0.05,
+			"DESCRIPTION" : "Day/night cycle speed. Higher = faster.",
+			"MAX" : 0.5,
+			"MIN" : 0.003,
+			"NAME" : "sun_speed",
 			"TYPE" : "slider",
 			"UI_GROUP" : "Sky"
 		}
