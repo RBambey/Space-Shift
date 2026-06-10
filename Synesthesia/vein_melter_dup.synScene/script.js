@@ -64,13 +64,13 @@ function update(dt) {
 
         // ---- Pitch ----
         pitchIdleTime = Math.abs(pr) < 0.05 ? pitchIdleTime + dt : 0.0;
-        warpPitch -= pr * 3.0 * dt;
+        warpPitch += pr * 3.0 * dt;
         warpPitch = Math.max(-1.0, Math.min(1.0, warpPitch));
         if (pitchIdleTime > 0.6) warpPitch += (0.0 - warpPitch) * 2.5 * dt;
 
         // ---- Yaw ----
         yawIdleTime = Math.abs(yr) < 0.05 ? yawIdleTime + dt : 0.0;
-        warpYaw -= yr * 3.0 * dt;
+        warpYaw += yr * 3.0 * dt;
         warpYaw = Math.max(-1.0, Math.min(1.0, warpYaw));
         if (yawIdleTime > 0.6) warpYaw += (0.0 - warpYaw) * 2.5 * dt;
 
@@ -94,7 +94,7 @@ function update(dt) {
         }
 
         if (!autoRollActive) {
-            warpRoll += rr * Math.PI * 1.5 * dt;
+            warpRoll -= rr * Math.PI * 1.5 * dt;
             // No auto-level for roll — view holds at current angle when control is released
         }
     }
