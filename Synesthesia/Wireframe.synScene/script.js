@@ -223,10 +223,13 @@ function update(dt) {
     cam.update(dt,
         { pitch: pitch, roll_rate: roll_rate, yaw_rate: yaw_rate,
           barrel_roll: barrel_roll, fly_speed: fly_speed, recenter: recenter },
-        { recenterY:  function(x, z) { return floorHeight(x, z) + 5.0; },
-          altMin:     function(x, z) { return floorHeight(x, z) + 1.5; },
-          altMax:     function(x, z) { return floorHeight(x, z) + wall_height + 40.0; },
-          wallLeft:   function(x, z) { return pathCenter(z) - halfWidthJS(z) + wallMargin(); },
-          wallRight:  function(x, z) { return pathCenter(z) + halfWidthJS(z) - wallMargin(); } }
+        { recenterY:  function(x, z) { return floorHeight(x, z) + wall_height + 5.0; },
+          altMin:     function(x, z) {
+              // Inside canyon: hover above floor. Outside: hover above exterior plateau.
+              var inCanyon = Math.abs(x - pathCenter(z)) < halfWidthJS(z) - wallMargin();
+              return inCanyon ? floorHeight(x, z) + 1.5
+                              : floorHeight(x, z) + wall_height + 1.0;
+          },
+          altMax:     function(x, z) { return floorHeight(x, z) + wall_height + 200.0; } }
     );
 }
