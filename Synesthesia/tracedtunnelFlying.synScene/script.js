@@ -64,7 +64,7 @@ function update(dt) {
 
         // ---- Yaw ----
         yawIdleTime = Math.abs(yr) < 0.05 ? yawIdleTime + dt : 0.0;
-        warpYaw -= yr * 3.0 * dt;
+        warpYaw += yr * 3.0 * dt;
         warpYaw = Math.max(-1.0, Math.min(1.0, warpYaw));
         if (yawIdleTime > 0.6) warpYaw += (0.0 - warpYaw) * 2.5 * dt;
 

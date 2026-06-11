@@ -88,7 +88,7 @@ function update(dt) {
         }
 
         if (!autoRollActive) {
-            warpRoll += rr * Math.PI * 1.5 * dt;
+            warpRoll -= rr * Math.PI * 1.5 * dt;
             // No auto-level for roll — view holds at current angle when control is released
         }
     }
