@@ -1,0 +1,179 @@
+{
+	"CONTROLS" :
+	[
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "Trigger a complete barrel roll.",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "barrel_roll",
+			"TYPE" : "bang",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "Smoothly return to center, level flight.",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "recenter",
+			"TYPE" : "bang",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 15,
+			"DESCRIPTION" : "Forward flight speed in units per second.",
+			"MAX" : 80,
+			"MIN" : 5,
+			"NAME" : "fly_speed",
+			"TYPE" : "slider",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "Nose up/down. Negative = nose down.",
+			"MAX" : 1,
+			"MIN" : -1,
+			"NAME" : "pitch",
+			"TYPE" : "slider",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "Roll left/right.",
+			"MAX" : 1,
+			"MIN" : -1,
+			"NAME" : "roll_rate",
+			"TYPE" : "slider",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "Rudder left/right. Stacks with banking.",
+			"MAX" : 1,
+			"MIN" : -1,
+			"NAME" : "yaw_rate",
+			"TYPE" : "slider",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 300,
+			"DESCRIPTION" : "How far the camera sees before fading to fog.",
+			"MAX" : 500,
+			"MIN" : 50,
+			"NAME" : "draw_distance",
+			"TYPE" : "slider",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 3,
+			"DESCRIPTION" : "Minimum flight altitude above the lake surface.",
+			"MAX" : 20,
+			"MIN" : 1,
+			"NAME" : "min_height",
+			"TYPE" : "slider",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 80,
+			"DESCRIPTION" : "Maximum flight altitude.",
+			"MAX" : 200,
+			"MIN" : 10,
+			"NAME" : "max_height",
+			"TYPE" : "slider",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 1.0,
+			"DESCRIPTION" : "Overall brightness of the aurora ribbons.",
+			"MAX" : 2,
+			"MIN" : 0,
+			"NAME" : "aurora_intensity",
+			"PARAMS" : 0.1,
+			"TYPE" : "slider smooth",
+			"UI_GROUP" : "Aurora"
+		},
+		{
+			"DEFAULT" : 0.4,
+			"DESCRIPTION" : "Animation speed of the aurora bands.",
+			"MAX" : 3,
+			"MIN" : 0.1,
+			"NAME" : "aurora_speed",
+			"PARAMS" : 0.1,
+			"TYPE" : "slider smooth",
+			"UI_GROUP" : "Aurora"
+		},
+		{
+			"DEFAULT" : 0.0,
+			"DESCRIPTION" : "Rotate the aurora palette through the color spectrum.",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "aurora_hue",
+			"PARAMS" : 0.05,
+			"TYPE" : "knob smooth",
+			"UI_GROUP" : "Aurora"
+		},
+		{
+			"DEFAULT" : 0.1,
+			"DESCRIPTION" : "Height of the water surface ripples.",
+			"MAX" : 0.5,
+			"MIN" : 0,
+			"NAME" : "wave_height",
+			"PARAMS" : 0.05,
+			"TYPE" : "slider smooth",
+			"UI_GROUP" : "Lake"
+		},
+		{
+			"DEFAULT" : 0.75,
+			"DESCRIPTION" : "How clearly the lake mirrors the aurora above.",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "water_clarity",
+			"PARAMS" : 0.05,
+			"TYPE" : "slider smooth",
+			"UI_GROUP" : "Lake"
+		},
+		{
+			"DEFAULT" : 0.05,
+			"DESCRIPTION" : "Blend of previous frame — motion trails and temporal smoothing.",
+			"MAX" : 0.992,
+			"MIN" : 0,
+			"NAME" : "motion_blur",
+			"PARAMS" : 0.1,
+			"TYPE" : "slider smooth",
+			"UI_GROUP" : "Visual"
+		},
+		{
+			"DEFAULT" : 1.2,
+			"DESCRIPTION" : "How strongly bass flashes the maple leaf flags.",
+			"MAX" : 3,
+			"MIN" : 0,
+			"NAME" : "flag_glow",
+			"PARAMS" : 0.1,
+			"TYPE" : "slider smooth",
+			"UI_GROUP" : "Flags"
+		},
+		{
+			"DEFAULT" : 0.7,
+			"DESCRIPTION" : "How strongly bass pulses the aurora brightness and flag glow.",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "bass_reactivity",
+			"PARAMS" : 0.1,
+			"TYPE" : "slider smooth",
+			"UI_GROUP" : "Audio"
+		}
+	],
+	"CREDIT" : "RBambey",
+	"DESCRIPTION" : "Fly over a northern Canadian lake at night. Aurora borealis painted across the sky, Canada geese in V-formation, and maple leaf flags glowing to the beat. Aurora system adapted from Aurora Paint by Noztol.",
+	"GPU" : 1,
+	"HEIGHT" : 1080,
+	"MEDIA" :
+	[
+		{
+			"FILTER" : "linear",
+			"WRAP" : "repeat"
+		}
+	],
+	"TITLE" : "Aurora Canada",
+	"WIDTH" : 1920
+}
