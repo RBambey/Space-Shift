@@ -20,7 +20,7 @@
 			"UI_GROUP" : "Flight"
 		},
 		{
-			"DEFAULT" : 15,
+			"DEFAULT" : 20,
 			"DESCRIPTION" : "Forward flight speed in units per second.",
 			"MAX" : 80,
 			"MIN" : 5,
@@ -65,22 +65,52 @@
 			"UI_GROUP" : "Flight"
 		},
 		{
-			"DEFAULT" : 3,
-			"DESCRIPTION" : "Minimum flight altitude above the lake surface.",
-			"MAX" : 20,
+			"DEFAULT" : 8,
+			"DESCRIPTION" : "Minimum flight altitude — raise to fly above peaks, lower to thread valleys.",
+			"MAX" : 100,
 			"MIN" : 1,
 			"NAME" : "min_height",
 			"TYPE" : "slider",
 			"UI_GROUP" : "Flight"
 		},
 		{
-			"DEFAULT" : 80,
+			"DEFAULT" : 100,
 			"DESCRIPTION" : "Maximum flight altitude.",
-			"MAX" : 200,
+			"MAX" : 300,
 			"MIN" : 10,
 			"NAME" : "max_height",
 			"TYPE" : "slider",
 			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 1.0,
+			"DESCRIPTION" : "Scale of terrain features — higher = broader mountain ranges.",
+			"MAX" : 3,
+			"MIN" : 0.3,
+			"NAME" : "terrain_scale",
+			"PARAMS" : 0.1,
+			"TYPE" : "slider smooth",
+			"UI_GROUP" : "Terrain"
+		},
+		{
+			"DEFAULT" : 7.0,
+			"DESCRIPTION" : "Altitude where snow begins — lower values cover more of the mountain in snow.",
+			"MAX" : 15,
+			"MIN" : 1,
+			"NAME" : "snow_line",
+			"PARAMS" : 0.2,
+			"TYPE" : "slider smooth",
+			"UI_GROUP" : "Terrain"
+		},
+		{
+			"DEFAULT" : 0.3,
+			"DESCRIPTION" : "Moon azimuth — rotates the cold directional light around the mountains.",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "moon_angle",
+			"PARAMS" : 0.05,
+			"TYPE" : "knob smooth",
+			"UI_GROUP" : "Terrain"
 		},
 		{
 			"DEFAULT" : 1.0,
@@ -113,26 +143,6 @@
 			"UI_GROUP" : "Aurora"
 		},
 		{
-			"DEFAULT" : 0.1,
-			"DESCRIPTION" : "Height of the water surface ripples.",
-			"MAX" : 0.5,
-			"MIN" : 0,
-			"NAME" : "wave_height",
-			"PARAMS" : 0.05,
-			"TYPE" : "slider smooth",
-			"UI_GROUP" : "Lake"
-		},
-		{
-			"DEFAULT" : 0.75,
-			"DESCRIPTION" : "How clearly the lake mirrors the aurora above.",
-			"MAX" : 1,
-			"MIN" : 0,
-			"NAME" : "water_clarity",
-			"PARAMS" : 0.05,
-			"TYPE" : "slider smooth",
-			"UI_GROUP" : "Lake"
-		},
-		{
 			"DEFAULT" : 0.05,
 			"DESCRIPTION" : "Blend of previous frame — motion trails and temporal smoothing.",
 			"MAX" : 0.992,
@@ -144,7 +154,7 @@
 		},
 		{
 			"DEFAULT" : 1.2,
-			"DESCRIPTION" : "How strongly bass flashes the maple leaf flags.",
+			"DESCRIPTION" : "How strongly bass flashes the maple leaf flags red.",
 			"MAX" : 3,
 			"MIN" : 0,
 			"NAME" : "flag_glow",
@@ -154,7 +164,7 @@
 		},
 		{
 			"DEFAULT" : 0.7,
-			"DESCRIPTION" : "How strongly bass pulses the aurora brightness and flag glow.",
+			"DESCRIPTION" : "How strongly bass pulses the aurora and flag glow.",
 			"MAX" : 1,
 			"MIN" : 0,
 			"NAME" : "bass_reactivity",
@@ -164,7 +174,7 @@
 		}
 	],
 	"CREDIT" : "RBambey",
-	"DESCRIPTION" : "Fly over a northern Canadian lake at night. Aurora borealis painted across the sky, Canada geese in V-formation, and maple leaf flags glowing to the beat. Aurora system adapted from Aurora Paint by Noztol.",
+	"DESCRIPTION" : "Fly over snowy Canadian mountains at night. Aurora borealis ribbons glow above the peaks, Canada geese fly in V-formation, and maple leaf flags planted in the terrain flash red to the beat. Terrain inspired by Sirenian Dawn (nimitz). Aurora system adapted from Aurora Paint by Noztol.",
 	"GPU" : 1,
 	"HEIGHT" : 1080,
 	"MEDIA" :
