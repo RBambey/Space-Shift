@@ -1,0 +1,160 @@
+{
+	"CONTROLS" : 
+	[
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "Trigger a complete barrel roll.",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "barrel_roll",
+			"TYPE" : "bang",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "Smoothly return to center, level flight.",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "recenter",
+			"TYPE" : "bang",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 6,
+			"DESCRIPTION" : "Forward flight speed in units per second.",
+			"MAX" : 45,
+			"MIN" : 1,
+			"NAME" : "fly_speed",
+			"TYPE" : "slider",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "Nose up/down. Negative = nose down.",
+			"MAX" : 1,
+			"MIN" : -1,
+			"NAME" : "pitch",
+			"TYPE" : "slider",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "Roll left/right.",
+			"MAX" : 1,
+			"MIN" : -1,
+			"NAME" : "roll_rate",
+			"TYPE" : "slider",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 0,
+			"DESCRIPTION" : "Rudder left/right. Stacks with banking.",
+			"MAX" : 1,
+			"MIN" : -1,
+			"NAME" : "yaw_rate",
+			"TYPE" : "slider",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 200,
+			"DESCRIPTION" : "How far the camera sees before fading to sky.",
+			"MAX" : 200,
+			"MIN" : 20,
+			"NAME" : "draw_distance",
+			"TYPE" : "slider",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 2,
+			"DESCRIPTION" : "Minimum flight altitude above the ground.",
+			"MAX" : 15,
+			"MIN" : 0.5,
+			"NAME" : "min_height",
+			"TYPE" : "slider",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 20,
+			"DESCRIPTION" : "Maximum flight altitude.",
+			"MAX" : 80,
+			"MIN" : 5,
+			"NAME" : "max_height",
+			"TYPE" : "slider",
+			"UI_GROUP" : "Flight"
+		},
+		{
+			"DEFAULT" : 1.5,
+			"DESCRIPTION" : "Canopy fullness. 0 = bare trunks only, 1.5+ = full dense canopy.",
+			"MAX" : 2.5,
+			"MIN" : 0,
+			"NAME" : "tree_density",
+			"PARAMS" : 0.05,
+			"TYPE" : "slider smooth",
+			"UI_GROUP" : "Forest"
+		},
+		{
+			"DEFAULT" : 0.9,
+			"DESCRIPTION" : "How much of the sky is covered by clouds. 0 = clear, 1 = overcast.",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "cloud_cover",
+			"PARAMS" : 0.05,
+			"TYPE" : "slider smooth",
+			"UI_GROUP" : "Sky"
+		},
+		{
+			"DEFAULT" : 0.35,
+			"DESCRIPTION" : "Temporal blur — blends current frame with previous. Higher = smoother frosted texture, more motion trails.",
+			"MAX" : 0.992,
+			"MIN" : 0,
+			"NAME" : "motion_blur",
+			"PARAMS" : 0.05,
+			"TYPE" : "slider smooth",
+			"UI_GROUP" : "Visual"
+		},
+		{
+			"DEFAULT" : 0.4,
+			"DESCRIPTION" : "Strength of canopy brightness pulse on bass hits.",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "bass_reactivity",
+			"PARAMS" : 0.05,
+			"TYPE" : "slider smooth",
+			"UI_GROUP" : "Audio"
+		},
+		{
+			"DEFAULT" : 0.35,
+			"DESCRIPTION" : "How often a sauropod appears. 0 = none, 1 = a dino in nearly every clearing.",
+			"MAX" : 1,
+			"MIN" : 0,
+			"NAME" : "dino_density",
+			"PARAMS" : 0.05,
+			"TYPE" : "slider smooth",
+			"UI_GROUP" : "Dinosaurs"
+		},
+		{
+			"DEFAULT" : 1.8,
+			"DESCRIPTION" : "Sauropod size multiplier relative to the design blockout.",
+			"MAX" : 4,
+			"MIN" : 0.5,
+			"NAME" : "dino_scale",
+			"PARAMS" : 0.05,
+			"TYPE" : "slider smooth",
+			"UI_GROUP" : "Dinosaurs"
+		}
+	],
+	"CREDIT" : "RBambey",
+	"DESCRIPTION" : "Fly through a misty alpine pine forest at dusk, grazed by slate blue-grey sauropods standing out against the warm sunset light. Traditional conical conifers dusted with snow, distant snow-capped peaks silhouetted against the glow, and hard ground shadows cast by every trunk, canopy, and dino.",
+	"GPU" : 1,
+	"HEIGHT" : 1080,
+	"IMAGE_PATH" : "default_thumbnail.png",
+	"MEDIA" : 
+	[
+		{
+			"FILTER" : "linear",
+			"WRAP" : "repeat"
+		}
+	],
+	"TITLE" : "Dino Planet",
+	"WIDTH" : 1920
+}
