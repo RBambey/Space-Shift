@@ -157,6 +157,98 @@ float dinoDE(vec3 p, float dscale, float phase) {
     return d * dscale;
 }
 
+// One tiny T-rex arm: two segments plus a small clawed hand.
+float trexArm(float dAcc, vec3 p, float armX, vec3 shoulder) {
+    vec3 sh    = vec3(armX, shoulder.y, shoulder.z);
+    vec3 elbow = sh + vec3(0.0, -0.35, 0.20);
+    vec3 hand  = elbow + vec3(0.0, -0.28, 0.12);
+    dAcc = dsmin(dAcc, sdCapsule(p, sh, elbow, 0.13, 0.10), 0.15);
+    dAcc = dsmin(dAcc, sdCapsule(p, elbow, hand, 0.10, 0.07), 0.12);
+    dAcc = min(dAcc, sdEllipsoid(p - hand, vec3(0.07, 0.06, 0.10)));
+    return dAcc;
+}
+
+// One T-rex leg: thigh -> shin -> digitigrade foot, plus 3 forward toes.
+// `stride` (an already-phased sine) drives the walk cycle, `lift` raises
+// the foot as it swings forward.
+float trexLeg(float dAcc, vec3 p, float legX, float hipH, float kneeH, float ankleH,
+              float toeH, float stride, float lift) {
+    vec3 hip     = vec3(legX, hipH,        0.0);
+    vec3 knee    = vec3(legX, kneeH,       0.35 + stride * 0.3);
+    vec3 ankle   = vec3(legX, ankleH,      0.20 + stride * 0.6);
+    vec3 toeBase = vec3(legX, toeH + lift, 0.75 + stride);
+
+    dAcc = dsmin(dAcc, sdCapsule(p, hip, knee, 0.55, 0.38), 0.4);
+    dAcc = dsmin(dAcc, sdCapsule(p, knee, ankle, 0.38, 0.22), 0.35);
+    dAcc = dsmin(dAcc, sdCapsule(p, ankle, toeBase, 0.22, 0.16), 0.3);
+
+    for (int i = -1; i <= 1; i++) {
+        vec3 toeTip = toeBase + vec3(float(i) * 0.16, -0.03, 0.55);
+        dAcc = min(dAcc, sdCapsule(p, toeBase, toeTip, 0.10, 0.03));
+    }
+    return dAcc;
+}
+
+// Bipedal theropod, blocked out in Blender/DinoPlanet/trex_blockout.blend.
+// Same local-space convention as dinoDE: +Z forward, +X right, +Y up, feet
+// resting on y = 0. Torso pivots over the hips rather than a fixed spine,
+// matching the modern horizontal, tail-counterbalanced pose.
+float trexDE(vec3 p, float dscale, float phase) {
+    p /= dscale;
+
+    const float HIP_H = 3.6;
+    const float TORSO_LEN = 4.6, TORSO_WID = 1.7, TORSO_HGT = 2.1;
+
+    vec3  torsoC = vec3(0.0, HIP_H + 0.15, TORSO_LEN * 0.28);
+    float d = sdEllipsoid(p - torsoC, vec3(TORSO_WID * 0.5, TORSO_HGT * 0.5, TORSO_LEN * 0.5));
+
+    // Neck + head: short and thick, gentle stalking bob
+    float bob        = sin(TIME * 0.9 + phase) * 0.15;
+    vec3  chestFront = torsoC + vec3(0.0, TORSO_HGT * 0.12, TORSO_LEN * 0.46);
+    vec3  neckMid    = chestFront + vec3(0.0, 0.55 + bob * 0.3, 0.65);
+    vec3  neckTop    = neckMid + vec3(0.0, 0.35 + bob, 0.5);
+    d = dsmin(d, sdCapsule(p, chestFront, neckMid, 0.62, 0.55), 0.35);
+    d = dsmin(d, sdCapsule(p, neckMid, neckTop, 0.55, 0.50), 0.3);
+
+    vec3 headC = neckTop + vec3(0.0, 0.05, 0.55);
+    d = dsmin(d, sdEllipsoid(p - headC, vec3(0.42, 0.48, 0.55)), 0.25);
+    vec3 snoutC = headC + vec3(0.0, -0.12, 0.85);
+    d = dsmin(d, sdEllipsoid(p - snoutC, vec3(0.28, 0.30, 0.62)), 0.2);
+    vec3 jawC = snoutC + vec3(0.0, -0.20, 0.05);
+    d = dsmin(d, sdEllipsoid(p - jawC, vec3(0.22, 0.16, 0.55)), 0.15);
+
+    // Tail: tapering, swaying, drooping toward the tip
+    float sway     = sin(TIME * 0.5 + phase + 2.1) * 0.5;
+    vec3  tailBase = vec3(0.0, HIP_H + TORSO_HGT * 0.05, -TORSO_LEN * 0.30);
+    vec3  prevT    = tailBase;
+    for (int i = 1; i <= 6; i++) {
+        float t     = float(i) / 6.0;
+        float back  = t * 6.4;
+        float droop = -0.55 * pow(t, 1.6);
+        vec3  cur   = tailBase + vec3(sway * t * t, droop, -back);
+        float r0    = max(0.60 - 0.095 * float(i - 1), 0.03);
+        float r1    = max(0.60 - 0.095 * float(i),      0.025);
+        d = dsmin(d, sdCapsule(p, prevT, cur, r0, r1), 0.3);
+        prevT = cur;
+    }
+
+    // Tiny arms — deliberately small next to the hind legs
+    float armSide  = TORSO_WID * 0.45;
+    vec3  shoulder = torsoC + vec3(0.0, TORSO_HGT * 0.25, TORSO_LEN * 0.30);
+    d = trexArm(d, p,  armSide, shoulder);
+    d = trexArm(d, p, -armSide, shoulder);
+
+    // Legs: a biped alternates left/right, unlike the sauropod's 4-beat gait
+    float wt      = TIME * 1.8 + phase;
+    float strideL = sin(wt);
+    float strideR = sin(wt + 3.14159265);
+    float legSide = TORSO_WID * 0.55;
+    d = trexLeg(d, p,  legSide, HIP_H, HIP_H * 0.55, HIP_H * 0.18, 0.16, strideL, max(0.0, strideL) * 0.4);
+    d = trexLeg(d, p, -legSide, HIP_H, HIP_H * 0.55, HIP_H * 0.18, 0.16, strideR, max(0.0, strideR) * 0.4);
+
+    return d * dscale;
+}
+
 // ---- Terrain (rolling hills) -----------------------------------------------
 
 float terrainHash(vec2 p) {
@@ -213,7 +305,8 @@ float DE(vec3 p0) {
 
     float terrain = min(dg * TREE_SCALE, d * TREE_SCALE);
 
-    // ---- Dinos: at most one sauropod per large world cell ----
+    // ---- Dinos: at most one per large world cell — sauropod or T-rex, ----
+    // ---- each with its own random size around dino_scale.             ----
     float dCellX = floor(p0.x / DINO_CELL);
     float dCellZ = floor(p0.z / DINO_CELL);
     float dh1 = fract(sin(dCellX * 269.5 + dCellZ * 183.3 + 12.9) * 43758.5453);
@@ -222,15 +315,22 @@ float DE(vec3 p0) {
         float dh2 = fract(sin(dCellX * 127.1 + dCellZ * 311.7 +  45.1) * 43758.5453);
         float dh3 = fract(sin(dCellX *  78.2 + dCellZ *  92.7 +  91.3) * 43758.5453);
         float dh4 = fract(sin(dCellX * 191.3 + dCellZ *  57.9 + 133.7) * 43758.5453);
+        float dh5 = fract(sin(dCellX *  61.7 + dCellZ * 213.1 +  27.9) * 43758.5453);
+        float dh6 = fract(sin(dCellX * 143.9 + dCellZ *  39.4 + 205.2) * 43758.5453);
+
+        float dscale = dino_scale * (0.82 + dh5 * 0.36);   // ±~18% size variety per instance
+
         float dinoX = (dCellX + 0.2 + dh2 * 0.6) * DINO_CELL;
         float dinoZ = (dCellZ + 0.2 + dh3 * 0.6) * DINO_CELL;
         float dinoGroundY = terrainHeight(vec2(dinoX, dinoZ) / TREE_SCALE) * TREE_SCALE;
-        vec3  dinoPos = vec3(dinoX, dinoGroundY - 0.16 * dino_scale, dinoZ);
+        vec3  dinoPos = vec3(dinoX, dinoGroundY - 0.16 * dscale, dinoZ);
         float heading = dh4 * 6.28318530718;
         float ca = cos(heading), sa = sin(heading);
         vec3  lp = p0 - dinoPos;
         lp.xz = mat2(ca, -sa, sa, ca) * lp.xz;
-        dinoDist  = dinoDE(lp, dino_scale, dh2 * 6.28318530718);
+
+        float phase = dh2 * 6.28318530718;
+        dinoDist  = dh6 < 0.35 ? trexDE(lp, dscale, phase) : dinoDE(lp, dscale, phase);
         gDinoHash = dh2;
     }
 
@@ -446,6 +546,16 @@ vec4 renderMain() {
         vec3  hideBack  = hsv2rgb(vec3(0.58 + dinoHue * 0.05, 0.32, 0.58));
         vec3  hideBelly = vec3(0.80, 0.84, 0.90);
         vec3  hideCol   = mix(hideBelly, hideBack, smoothstep(-0.2, 0.4, N.y));
+
+        // On a bass hit, hides sweep through prismatic colors instead of
+        // blue-grey. Each dino's hue offset (dinoHue) keeps a herd from all
+        // flashing the same color at once; hue keeps drifting slowly at rest
+        // and swings further with the bass envelope on a hit.
+        float bassPulse = pow(clamp(syn_BassLevel, 0.0, 1.0), 1.5);
+        float prismHue  = fract(dinoHue + TIME * 0.15 + bassPulse * 0.6);
+        vec3  prismCol  = hsv2rgb(vec3(prismHue, 0.85, 0.62));
+        hideCol = mix(hideCol, prismCol, bassPulse);
+
         baseCol = mix(baseCol, hideCol, dinoMix);
 
         // Lighting: ambient + sun + hotspot + specular
