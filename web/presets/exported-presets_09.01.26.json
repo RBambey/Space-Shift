@@ -1,0 +1,764 @@
+{
+   "Black Hole Redux" : {
+      "Black Hole Rocks" : {
+         "hasMedia" : true,
+         "hasMetaC" : true,
+         "hasSceneC" : true,
+         "mediaFile" : {
+            "FULLPATH" : "",
+            "ID" : "",
+            "TYPE" : ""
+         },
+         "mediaIsMuted" : false,
+         "metaCIsMuted" : false,
+         "metaControlPreset" : [
+            {
+               "ID" : "meta-control-10",
+               "VALUES" : [ 0.370000004768372, 0.0299999993294477, 0.0299999993294477 ]
+            },
+            {
+               "ID" : "meta-control-11",
+               "VALUES" : [ 0.870000004768372, 0.5, 0.0500000007450581 ]
+            },
+            {
+               "ID" : "meta-control-4",
+               "VALUES" : [ 0 ]
+            },
+            {
+               "ID" : "meta-control-5",
+               "VALUES" : [ 0 ]
+            },
+            {
+               "ID" : "meta-control-6",
+               "VALUES" : [ 0.5 ]
+            },
+            {
+               "ID" : "meta-control-7",
+               "VALUES" : [ 0 ]
+            },
+            {
+               "ID" : "meta-control-8",
+               "VALUES" : [ 1 ]
+            },
+            {
+               "ID" : "meta-control-9",
+               "VALUES" : [ 0 ]
+            },
+            {
+               "ID" : "meta-control-alpha-channel",
+               "VALUES" : [ 0 ]
+            },
+            {
+               "ID" : "meta-control-audio-speed",
+               "VALUES" : [ 0.5 ]
+            },
+            {
+               "ID" : "meta-control-color_correction-1",
+               "VALUES" : [ 0.5 ]
+            },
+            {
+               "ID" : "meta-control-color_correction-2",
+               "VALUES" : [ 0.499749898910522 ]
+            },
+            {
+               "ID" : "meta-control-color_correction-3",
+               "VALUES" : [ 0.5 ]
+            },
+            {
+               "ID" : "meta-control-color_correction-4",
+               "VALUES" : [ 0.5 ]
+            },
+            {
+               "ID" : "meta-control-color_correction-5",
+               "VALUES" : [ 0.5 ]
+            },
+            {
+               "ID" : "meta-control-color_correction-6",
+               "VALUES" : [ 0 ]
+            },
+            {
+               "ID" : "meta-control-flip-media-horizontal",
+               "VALUES" : [ 0 ]
+            },
+            {
+               "ID" : "meta-control-flip-media-vertical",
+               "VALUES" : [ 0 ]
+            },
+            {
+               "ID" : "meta-control-media-gamma",
+               "VALUES" : [ 0.5 ]
+            },
+            {
+               "ID" : "meta-control-media-hue",
+               "VALUES" : [ 0.5 ]
+            },
+            {
+               "ID" : "meta-control-media-saturation",
+               "VALUES" : [ 0.5 ]
+            },
+            {
+               "ID" : "meta-control-media-scale",
+               "VALUES" : [ 0.5 ]
+            },
+            {
+               "ID" : "meta-control-paused",
+               "VALUES" : [ 0 ]
+            },
+            {
+               "ID" : "meta-control-playback-mode",
+               "VALUES" : [ 0 ]
+            },
+            {
+               "ID" : "meta-control-playback-speed",
+               "VALUES" : [ 0.5 ]
+            },
+            {
+               "ID" : "meta-control-reactivity",
+               "VALUES" : [ 0.5 ]
+            },
+            {
+               "ID" : "meta-control-transition",
+               "VALUES" : [ 0 ]
+            }
+         ],
+         "name" : "Black Hole Rocks",
+         "parentScene" : "Black Hole Redux",
+         "sceneCIsMuted" : false,
+         "sceneControlPreset" : [
+            {
+               "ID" : "barrel_roll",
+               "VALUES" : [ 0 ]
+            },
+            {
+               "ID" : "base_hue",
+               "VALUES" : [ 0 ]
+            },
+            {
+               "ID" : "bass_mix",
+               "VALUES" : [ 0.100000001490116, 0.300000011920929 ]
+            },
+            {
+               "ID" : "bass_pow",
+               "VALUES" : [ 0.75 ]
+            },
+            {
+               "ID" : "bh_position",
+               "VALUES" : [ 0.416666656732559, 0.5 ]
+            },
+            {
+               "ID" : "bh_rotation",
+               "VALUES" : [ 0.115384615957737 ]
+            },
+            {
+               "ID" : "bh_scale",
+               "VALUES" : [ 0.259259253740311 ]
+            },
+            {
+               "ID" : "bloom_amount",
+               "VALUES" : [ 0.00499999988824129 ]
+            },
+            {
+               "ID" : "color_burn_hue",
+               "VALUES" : [ 0 ]
+            },
+            {
+               "ID" : "color_burn_intensity",
+               "VALUES" : [ 0.200000002980232 ]
+            },
+            {
+               "ID" : "color_burn_saturation",
+               "VALUES" : [ 0.699999988079071 ]
+            },
+            {
+               "ID" : "disk_brightness",
+               "VALUES" : [ 0.461538463830948 ]
+            },
+            {
+               "ID" : "fly_speed",
+               "VALUES" : [ 0.333333343267441 ]
+            },
+            {
+               "ID" : "fov",
+               "VALUES" : [ 0.333333343267441 ]
+            },
+            {
+               "ID" : "max_height",
+               "VALUES" : [ 0.444444447755814 ]
+            },
+            {
+               "ID" : "min_height",
+               "VALUES" : [ 0.125 ]
+            },
+            {
+               "ID" : "motion_blur",
+               "VALUES" : [ 0.0504032261669636 ]
+            },
+            {
+               "ID" : "pitch",
+               "VALUES" : [ 0.5 ]
+            },
+            {
+               "ID" : "recenter",
+               "VALUES" : [ 0 ]
+            },
+            {
+               "ID" : "roll_rate",
+               "VALUES" : [ 0.5 ]
+            },
+            {
+               "ID" : "yaw_rate",
+               "VALUES" : [ 0.5 ]
+            }
+         ],
+         "synVersionNum" : "1.24.1.146"
+      }
+   },
+   "Gas Giant Tombs" : {
+      "Pink" : {
+         "hasMedia" : true,
+         "hasMetaC" : true,
+         "hasSceneC" : true,
+         "mediaFile" : {
+            "FULLPATH" : "",
+            "ID" : "",
+            "TYPE" : ""
+         },
+         "mediaIsMuted" : false,
+         "metaCIsMuted" : false,
+         "metaControlPreset" : [
+            {
+               "ID" : "meta-control-10",
+               "VALUES" : [ 0.370000004768372, 0.0299999993294477, 0.0299999993294477 ]
+            },
+            {
+               "ID" : "meta-control-11",
+               "VALUES" : [ 0.870000004768372, 0.5, 0.0500000007450581 ]
+            },
+            {
+               "ID" : "meta-control-4",
+               "VALUES" : [ 0 ]
+            },
+            {
+               "ID" : "meta-control-5",
+               "VALUES" : [ 0 ]
+            },
+            {
+               "ID" : "meta-control-6",
+               "VALUES" : [ 0.5 ]
+            },
+            {
+               "ID" : "meta-control-7",
+               "VALUES" : [ 0 ]
+            },
+            {
+               "ID" : "meta-control-8",
+               "VALUES" : [ 1 ]
+            },
+            {
+               "ID" : "meta-control-9",
+               "VALUES" : [ 0 ]
+            },
+            {
+               "ID" : "meta-control-alpha-channel",
+               "VALUES" : [ 0 ]
+            },
+            {
+               "ID" : "meta-control-audio-speed",
+               "VALUES" : [ 0.884615361690521 ]
+            },
+            {
+               "ID" : "meta-control-color_correction-1",
+               "VALUES" : [ 0.5 ]
+            },
+            {
+               "ID" : "meta-control-color_correction-2",
+               "VALUES" : [ 0.499749898910522 ]
+            },
+            {
+               "ID" : "meta-control-color_correction-3",
+               "VALUES" : [ 0.5 ]
+            },
+            {
+               "ID" : "meta-control-color_correction-4",
+               "VALUES" : [ 0.5 ]
+            },
+            {
+               "ID" : "meta-control-color_correction-5",
+               "VALUES" : [ 0.5 ]
+            },
+            {
+               "ID" : "meta-control-color_correction-6",
+               "VALUES" : [ 0 ]
+            },
+            {
+               "ID" : "meta-control-flip-media-horizontal",
+               "VALUES" : [ 0 ]
+            },
+            {
+               "ID" : "meta-control-flip-media-vertical",
+               "VALUES" : [ 0 ]
+            },
+            {
+               "ID" : "meta-control-media-gamma",
+               "VALUES" : [ 0.5 ]
+            },
+            {
+               "ID" : "meta-control-media-hue",
+               "VALUES" : [ 0.5 ]
+            },
+            {
+               "ID" : "meta-control-media-saturation",
+               "VALUES" : [ 0.5 ]
+            },
+            {
+               "ID" : "meta-control-media-scale",
+               "VALUES" : [ 0.5 ]
+            },
+            {
+               "ID" : "meta-control-paused",
+               "VALUES" : [ 0 ]
+            },
+            {
+               "ID" : "meta-control-playback-mode",
+               "VALUES" : [ 0 ]
+            },
+            {
+               "ID" : "meta-control-playback-speed",
+               "VALUES" : [ 0.5 ]
+            },
+            {
+               "ID" : "meta-control-reactivity",
+               "VALUES" : [ 0.830769240856171 ]
+            },
+            {
+               "ID" : "meta-control-transition",
+               "VALUES" : [ 0 ]
+            }
+         ],
+         "name" : "Pink",
+         "parentScene" : "Gas Giant Tombs",
+         "sceneCIsMuted" : false,
+         "sceneControlPreset" : [
+            {
+               "ID" : "barrel_roll",
+               "VALUES" : [ 0 ]
+            },
+            {
+               "ID" : "base_hue",
+               "VALUES" : [ 0.725000023841858 ]
+            },
+            {
+               "ID" : "bass_mix",
+               "VALUES" : [ 1, 0.829999983310699 ]
+            },
+            {
+               "ID" : "bass_pow",
+               "VALUES" : [ 0.780769228935242 ]
+            },
+            {
+               "ID" : "bloom_amount",
+               "VALUES" : [ 0.125 ]
+            },
+            {
+               "ID" : "color_burn_hue",
+               "VALUES" : [ 0.444999992847443 ]
+            },
+            {
+               "ID" : "color_burn_intensity",
+               "VALUES" : [ 0.215384617447853 ]
+            },
+            {
+               "ID" : "color_burn_saturation",
+               "VALUES" : [ 0.699999988079071 ]
+            },
+            {
+               "ID" : "fft_limit",
+               "VALUES" : [ 0.277939677238464 ]
+            },
+            {
+               "ID" : "fly_speed",
+               "VALUES" : [ 0.333333343267441 ]
+            },
+            {
+               "ID" : "fov",
+               "VALUES" : [ 0.333333343267441 ]
+            },
+            {
+               "ID" : "gas_giant_position",
+               "VALUES" : [ 0.33666667342186, 0.579999983310699 ]
+            },
+            {
+               "ID" : "light_direction",
+               "VALUES" : [ 0.560000002384186, 0.41499999165535 ]
+            },
+            {
+               "ID" : "max_height",
+               "VALUES" : [ 0.444444447755814 ]
+            },
+            {
+               "ID" : "media_displace",
+               "VALUES" : [ 0.5 ]
+            },
+            {
+               "ID" : "media_opacity",
+               "VALUES" : [ 0.699999988079071 ]
+            },
+            {
+               "ID" : "min_height",
+               "VALUES" : [ 0.100000001490116 ]
+            },
+            {
+               "ID" : "motion_blur",
+               "VALUES" : [ 0.0504032261669636 ]
+            },
+            {
+               "ID" : "pitch",
+               "VALUES" : [ 0.5 ]
+            },
+            {
+               "ID" : "recenter",
+               "VALUES" : [ 0 ]
+            },
+            {
+               "ID" : "ring_direction",
+               "VALUES" : [ 0.409999996423721, 0.264999985694885 ]
+            },
+            {
+               "ID" : "roll_rate",
+               "VALUES" : [ 0.5 ]
+            },
+            {
+               "ID" : "tomb_probability",
+               "VALUES" : [ 0.330000013113022 ]
+            },
+            {
+               "ID" : "yaw_rate",
+               "VALUES" : [ 0.5 ]
+            }
+         ],
+         "synVersionNum" : "1.24.1.146"
+      }
+   },
+   "Ocean Planet" : {
+      "04.26.26 19:35:02" : {
+         "hasMedia" : true,
+         "hasMetaC" : true,
+         "hasSceneC" : true,
+         "mediaFile" : {
+            "FULLPATH" : "",
+            "ID" : "",
+            "TYPE" : ""
+         },
+         "mediaIsMuted" : false,
+         "metaCIsMuted" : false,
+         "metaControlPreset" : [
+            {
+               "ID" : "meta-control-10",
+               "VALUES" : [ 0.370000004768372, 0.0299999993294477, 0.0299999993294477 ]
+            },
+            {
+               "ID" : "meta-control-11",
+               "VALUES" : [ 0.870000004768372, 0.5, 0.0500000007450581 ]
+            },
+            {
+               "ID" : "meta-control-4",
+               "VALUES" : [ 0 ]
+            },
+            {
+               "ID" : "meta-control-5",
+               "VALUES" : [ 0 ]
+            },
+            {
+               "ID" : "meta-control-6",
+               "VALUES" : [ 0.5 ]
+            },
+            {
+               "ID" : "meta-control-7",
+               "VALUES" : [ 0 ]
+            },
+            {
+               "ID" : "meta-control-8",
+               "VALUES" : [ 1 ]
+            },
+            {
+               "ID" : "meta-control-9",
+               "VALUES" : [ 0 ]
+            },
+            {
+               "ID" : "meta-control-alpha-channel",
+               "VALUES" : [ 0 ]
+            },
+            {
+               "ID" : "meta-control-audio-speed",
+               "VALUES" : [ 0.115384615957737 ]
+            },
+            {
+               "ID" : "meta-control-color_correction-1",
+               "VALUES" : [ 0.5 ]
+            },
+            {
+               "ID" : "meta-control-color_correction-2",
+               "VALUES" : [ 0.499749898910522 ]
+            },
+            {
+               "ID" : "meta-control-color_correction-3",
+               "VALUES" : [ 0.5 ]
+            },
+            {
+               "ID" : "meta-control-color_correction-4",
+               "VALUES" : [ 0.5 ]
+            },
+            {
+               "ID" : "meta-control-color_correction-5",
+               "VALUES" : [ 0.5 ]
+            },
+            {
+               "ID" : "meta-control-color_correction-6",
+               "VALUES" : [ 0 ]
+            },
+            {
+               "ID" : "meta-control-flip-media-horizontal",
+               "VALUES" : [ 0 ]
+            },
+            {
+               "ID" : "meta-control-flip-media-vertical",
+               "VALUES" : [ 0 ]
+            },
+            {
+               "ID" : "meta-control-media-gamma",
+               "VALUES" : [ 0.5 ]
+            },
+            {
+               "ID" : "meta-control-media-hue",
+               "VALUES" : [ 0.5 ]
+            },
+            {
+               "ID" : "meta-control-media-saturation",
+               "VALUES" : [ 0.5 ]
+            },
+            {
+               "ID" : "meta-control-media-scale",
+               "VALUES" : [ 0.5 ]
+            },
+            {
+               "ID" : "meta-control-paused",
+               "VALUES" : [ 0 ]
+            },
+            {
+               "ID" : "meta-control-playback-mode",
+               "VALUES" : [ 0 ]
+            },
+            {
+               "ID" : "meta-control-playback-speed",
+               "VALUES" : [ 0.5 ]
+            },
+            {
+               "ID" : "meta-control-reactivity",
+               "VALUES" : [ 0.0846153870224953 ]
+            },
+            {
+               "ID" : "meta-control-transition",
+               "VALUES" : [ 0 ]
+            }
+         ],
+         "name" : "04.26.26 19:35:02",
+         "parentScene" : "Ocean Planet",
+         "sceneCIsMuted" : false,
+         "sceneControlPreset" : [
+            {
+               "ID" : "barrel_roll",
+               "VALUES" : [ 0 ]
+            },
+            {
+               "ID" : "draw_distance",
+               "VALUES" : [ 0.444444447755814 ]
+            },
+            {
+               "ID" : "fly_speed",
+               "VALUES" : [ 0.400000005960464 ]
+            },
+            {
+               "ID" : "pitch_roll",
+               "VALUES" : [ 0.5, 0.5 ]
+            },
+            {
+               "ID" : "recenter",
+               "VALUES" : [ 0 ]
+            },
+            {
+               "ID" : "sea_choppiness",
+               "VALUES" : [ 0.466666668653488 ]
+            },
+            {
+               "ID" : "sea_speed",
+               "VALUES" : [ 0.241379305720329 ]
+            },
+            {
+               "ID" : "wave_height",
+               "VALUES" : [ 0.263157904148102 ]
+            }
+         ],
+         "synVersionNum" : "1.24.1.146"
+      },
+      "WaterPlanet" : {
+         "hasMedia" : true,
+         "hasMetaC" : true,
+         "hasSceneC" : true,
+         "mediaFile" : {
+            "FULLPATH" : "",
+            "ID" : "",
+            "TYPE" : ""
+         },
+         "mediaIsMuted" : false,
+         "metaCIsMuted" : false,
+         "metaControlPreset" : [
+            {
+               "ID" : "meta-control-10",
+               "VALUES" : [ 0.370000004768372, 0.0299999993294477, 0.0299999993294477 ]
+            },
+            {
+               "ID" : "meta-control-11",
+               "VALUES" : [ 0.870000004768372, 0.5, 0.0500000007450581 ]
+            },
+            {
+               "ID" : "meta-control-4",
+               "VALUES" : [ 0 ]
+            },
+            {
+               "ID" : "meta-control-5",
+               "VALUES" : [ 0 ]
+            },
+            {
+               "ID" : "meta-control-6",
+               "VALUES" : [ 0.5 ]
+            },
+            {
+               "ID" : "meta-control-7",
+               "VALUES" : [ 0 ]
+            },
+            {
+               "ID" : "meta-control-8",
+               "VALUES" : [ 1 ]
+            },
+            {
+               "ID" : "meta-control-9",
+               "VALUES" : [ 0 ]
+            },
+            {
+               "ID" : "meta-control-alpha-channel",
+               "VALUES" : [ 0 ]
+            },
+            {
+               "ID" : "meta-control-audio-speed",
+               "VALUES" : [ 0.115384615957737 ]
+            },
+            {
+               "ID" : "meta-control-color_correction-1",
+               "VALUES" : [ 0.5 ]
+            },
+            {
+               "ID" : "meta-control-color_correction-2",
+               "VALUES" : [ 0.499749898910522 ]
+            },
+            {
+               "ID" : "meta-control-color_correction-3",
+               "VALUES" : [ 0.5 ]
+            },
+            {
+               "ID" : "meta-control-color_correction-4",
+               "VALUES" : [ 0.5 ]
+            },
+            {
+               "ID" : "meta-control-color_correction-5",
+               "VALUES" : [ 0.5 ]
+            },
+            {
+               "ID" : "meta-control-color_correction-6",
+               "VALUES" : [ 0 ]
+            },
+            {
+               "ID" : "meta-control-flip-media-horizontal",
+               "VALUES" : [ 0 ]
+            },
+            {
+               "ID" : "meta-control-flip-media-vertical",
+               "VALUES" : [ 0 ]
+            },
+            {
+               "ID" : "meta-control-media-gamma",
+               "VALUES" : [ 0.5 ]
+            },
+            {
+               "ID" : "meta-control-media-hue",
+               "VALUES" : [ 0.5 ]
+            },
+            {
+               "ID" : "meta-control-media-saturation",
+               "VALUES" : [ 0.5 ]
+            },
+            {
+               "ID" : "meta-control-media-scale",
+               "VALUES" : [ 0.5 ]
+            },
+            {
+               "ID" : "meta-control-paused",
+               "VALUES" : [ 0 ]
+            },
+            {
+               "ID" : "meta-control-playback-mode",
+               "VALUES" : [ 0 ]
+            },
+            {
+               "ID" : "meta-control-playback-speed",
+               "VALUES" : [ 0.5 ]
+            },
+            {
+               "ID" : "meta-control-reactivity",
+               "VALUES" : [ 0.0846153870224953 ]
+            },
+            {
+               "ID" : "meta-control-transition",
+               "VALUES" : [ 0 ]
+            }
+         ],
+         "name" : "WaterPlanet",
+         "parentScene" : "Ocean Planet",
+         "sceneCIsMuted" : false,
+         "sceneControlPreset" : [
+            {
+               "ID" : "barrel_roll",
+               "VALUES" : [ 0 ]
+            },
+            {
+               "ID" : "draw_distance",
+               "VALUES" : [ 0.444444447755814 ]
+            },
+            {
+               "ID" : "fly_speed",
+               "VALUES" : [ 0.400000005960464 ]
+            },
+            {
+               "ID" : "pitch_roll",
+               "VALUES" : [ 0.5, 0.5 ]
+            },
+            {
+               "ID" : "recenter",
+               "VALUES" : [ 0 ]
+            },
+            {
+               "ID" : "sea_choppiness",
+               "VALUES" : [ 0.466666668653488 ]
+            },
+            {
+               "ID" : "sea_speed",
+               "VALUES" : [ 0.241379305720329 ]
+            },
+            {
+               "ID" : "wave_height",
+               "VALUES" : [ 0.263157904148102 ]
+            }
+         ],
+         "synVersionNum" : "1.24.1.146"
+      }
+   }
+}
