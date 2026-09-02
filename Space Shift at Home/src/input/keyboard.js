@@ -41,15 +41,17 @@ export function createKeyboardInput(controlsRuntime, controls) {
     const rollRamp = createAxisRamp(0.3, 0.15);
     const PITCH_SENSITIVITY = 0.5;
 
-    window.addEventListener('keydown', (e) => {
+    function onKeyDown(e) {
         if (e.repeat) return;
         held.add(e.code);
-        if (e.code === 'Space') barrelRollPulse = true;
+        if (e.code === 'KeyF') barrelRollPulse = true;
         if (e.code === 'KeyR') recenterPulse = true;
-    });
-    window.addEventListener('keyup', (e) => {
+    }
+    function onKeyUp(e) {
         held.delete(e.code);
-    });
+    }
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('keyup', onKeyUp);
 
     function axis(negCodes, posCodes) {
         const neg = negCodes.some(c => held.has(c));
@@ -82,5 +84,10 @@ export function createKeyboardInput(controlsRuntime, controls) {
         recenterPulse = false;
     }
 
-    return { update };
+    function dispose() {
+        window.removeEventListener('keydown', onKeyDown);
+        window.removeEventListener('keyup', onKeyUp);
+    }
+
+    return { update, dispose };
 }

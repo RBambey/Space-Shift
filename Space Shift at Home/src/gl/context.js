@@ -1,6 +1,11 @@
 export function createContext(canvas) {
     const gl = canvas.getContext('webgl2', { antialias: false, alpha: false });
     if (!gl) throw new Error('WebGL2 is not available in this browser.');
+    // Needed to render into RGBA16F color attachments (feedback-buffer scenes
+    // like Vein Melter declare FLOAT passes) - WebGL2 exposes the float
+    // texture format either way, but attaching one to a framebuffer as a
+    // render target specifically requires this extension.
+    gl.getExtension('EXT_color_buffer_float');
     return gl;
 }
 

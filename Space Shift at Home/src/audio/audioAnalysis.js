@@ -51,3 +51,44 @@ export function createBassAnalyzer(analyser, sampleRate) {
 
     return { update };
 }
+
+// syn_Spectrum (City's antenna FFT read via textureLod(...).y) - a 1-row
+// texture of the current frequency spectrum, replicated across R/G/B so a
+// scene reading any single channel gets the same data regardless of which
+// channel Synesthesia's own convention happens to use internally (unknown
+// without their source). Linearly downsampled from the raw FFT bins - not
+// verified to match Synesthesia's own log-scaling, if any, but close enough
+// for antenna-style level meters.
+const SPECTRUM_WIDTH = 128;
+
+export function createSpectrumTexture(gl, getAnalyserNode) {
+    const row = new Uint8Array(SPECTRUM_WIDTH * 4);
+    let bins = null;
+
+    const texture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, SPECTRUM_WIDTH, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, row);
+
+    function update() {
+        const analyser = getAnalyserNode();
+        if (!analyser) return;
+        if (!bins || bins.length !== analyser.frequencyBinCount) {
+            bins = new Uint8Array(analyser.frequencyBinCount);
+        }
+        analyser.getByteFrequencyData(bins);
+
+        const step = bins.length / SPECTRUM_WIDTH;
+        for (let x = 0; x < SPECTRUM_WIDTH; x++) {
+            const v = bins[Math.floor(x * step)];
+            row[x * 4] = v; row[x * 4 + 1] = v; row[x * 4 + 2] = v; row[x * 4 + 3] = 255;
+        }
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, SPECTRUM_WIDTH, 1, gl.RGBA, gl.UNSIGNED_BYTE, row);
+    }
+
+    return { texture, update };
+}

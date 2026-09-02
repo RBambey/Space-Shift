@@ -1,4 +1,4 @@
-import { createBufferTarget, resizeBufferTarget } from '../gl/framebuffer.js';
+import { createBufferTarget, resizeBufferTarget, deleteBufferTarget } from '../gl/framebuffer.js';
 
 // Confirmed from BlackHole.synScene/main.glsl (and identical in
 // BlackHoleRedux): PASSINDEX runs 0..N-1 writing to PASSES[i].TARGET in
@@ -16,7 +16,7 @@ import { createBufferTarget, resizeBufferTarget } from '../gl/framebuffer.js';
 export function createPassRunner(gl, program, quad, passConfigs) {
     const targets = passConfigs.map(p => ({
         name: p.TARGET,
-        buffer: createBufferTarget(gl, 16, 16),
+        buffer: createBufferTarget(gl, 16, 16, !!p.FLOAT),
     }));
     const finalPingPong = [createBufferTarget(gl, 16, 16), createBufferTarget(gl, 16, 16)];
     let finalReadIndex = 0;
@@ -69,13 +69,29 @@ export function createPassRunner(gl, program, quad, passConfigs) {
             quad.draw();
         }
 
-        gl.bindFramebuffer(gl.READ_FRAMEBUFFER, finalPingPong[writeIndex].framebuffer);
-        gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null);
-        gl.blitFramebuffer(0, 0, canvasWidth, canvasHeight, 0, 0, canvasWidth, canvasHeight, gl.COLOR_BUFFER_BIT, gl.NEAREST);
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-
         finalReadIndex = writeIndex;
     }
 
-    return { resize, render };
+    // Blits the just-rendered frame onto the visible canvas. Split out from
+    // render() so a scene can be rendered off-canvas instead - e.g. during
+    // the warp transition, where two scenes' outputs and the warp effect's
+    // output all need to be composited together before anything hits the
+    // actual canvas.
+    function presentToCanvas(canvasWidth, canvasHeight) {
+        gl.bindFramebuffer(gl.READ_FRAMEBUFFER, finalPingPong[finalReadIndex].framebuffer);
+        gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null);
+        gl.blitFramebuffer(0, 0, canvasWidth, canvasHeight, 0, 0, canvasWidth, canvasHeight, gl.COLOR_BUFFER_BIT, gl.NEAREST);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    }
+
+    function getOutputTexture() {
+        return finalPingPong[finalReadIndex].texture;
+    }
+
+    function dispose() {
+        for (const t of targets) deleteBufferTarget(gl, t.buffer);
+        for (const t of finalPingPong) deleteBufferTarget(gl, t);
+    }
+
+    return { resize, render, presentToCanvas, getOutputTexture, dispose };
 }

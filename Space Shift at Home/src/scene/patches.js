@@ -11,6 +11,40 @@
 // const (verified none are ever reassigned) fixes the compile without
 // touching the actual math.
 const PATCHES = {
+    'Vein Melter_dup': [
+        [
+            'float STEPS = 40;  // advection steps',
+            'int STEPS = 40;  // advection steps',
+        ],
+        [
+            // `amp`'s initializer reads a uniform (`retract`), which WebGL2's
+            // stricter validation rejects for a global-scope initializer even
+            // though it's not const-qualified - moved into renderMain() so
+            // it's still computed fresh every frame, just not at global scope.
+            'float amp =  1.0*(1.0-retract*0.1);   // self-amplification',
+            'float amp;   // self-amplification - assigned in renderMain(), see patches.js',
+        ],
+        [
+            'vec4 renderMain(){',
+            'vec4 renderMain(){\n\tamp = 1.0*(1.0-retract*0.1);',
+        ],
+        [
+            'PI/2));',
+            'PI/2.0));',
+        ],
+    ],
+    'Traced Tunnel_dup': [
+        [
+            'return mix(length(max(abs(p) - b + .1, 0.)) - .1, length(p)-0.5+(max(small_circles, 1.0)-1), min(small_circles, 1.0));',
+            'return mix(length(max(abs(p) - b + .1, 0.)) - .1, length(p)-0.5+(max(small_circles, 1.0)-1.0), min(small_circles, 1.0));',
+        ],
+    ],
+    'City': [
+        [
+            'return textureLod( syn_Spectrum, x, 0.0 ).y;',
+            'return textureLod( syn_Spectrum, vec2(x, 0.0), 0.0 ).y;',
+        ],
+    ],
     'Remnant Planet': [
         [
             'float minRad2                 = clamp(MINRAD2, 1.0e-9, 1.0);\nfloat absScalem1              = abs(SCALE - 1.0);\nfloat AbsScaleRaisedTo1mIters = pow(abs(SCALE), float(1 - 10));\nvec4  mboxScale               = vec4(SCALE, SCALE, SCALE, abs(SCALE)) / minRad2;',

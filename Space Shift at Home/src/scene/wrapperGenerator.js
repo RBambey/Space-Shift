@@ -6,6 +6,7 @@
 
 const FIXED_UNIFORMS = [
     'uniform float TIME;',
+    'uniform float syn_Time;',
     'uniform vec2  RENDERSIZE;',
     'uniform int   PASSINDEX;',
     'uniform float cam_x, cam_y, cam_z;',
@@ -16,7 +17,16 @@ const FIXED_UNIFORMS = [
     'uniform float syn_BassHits;',
     'uniform float syn_BassTime;',
     'uniform float syn_HighLevel;',
+    'uniform float syn_OnBeat;',
+    'uniform float syn_BPMSin2;',
+    'uniform float syn_BPMSin;',
+    'uniform float syn_HighHits;',
+    'uniform float syn_HighTime;',
+    'uniform float syn_MidHighTime;',
+    'uniform float syn_Presence;',
     'uniform sampler2D syn_FinalPass;',
+    'uniform sampler2D syn_Spectrum;',
+    'uniform sampler2D syn_Media;',
 ];
 
 const CONTROL_TYPE_TO_GLSL = {
@@ -89,11 +99,20 @@ export function generateWrapper({ glsl, sceneJson, script }) {
 
     const knownNames = new Set(['cam_x', 'cam_y', 'cam_z', 'cam_rx', 'cam_ry', 'cam_rz',
         'cam_ux', 'cam_uy', 'cam_uz', 'cam_fx', 'cam_fy', 'cam_fz',
-        'syn_BassLevel', 'syn_BassHits', 'syn_BassTime', 'syn_HighLevel', 'syn_FinalPass']);
+        'syn_BassLevel', 'syn_BassHits', 'syn_BassTime', 'syn_HighLevel',
+        'syn_OnBeat', 'syn_BPMSin2', 'syn_BPMSin', 'syn_HighHits', 'syn_HighTime', 'syn_MidHighTime', 'syn_Presence',
+        'syn_FinalPass', 'syn_Time', 'syn_Spectrum', 'syn_Media']);
     for (const c of controls) knownNames.add(c.NAME);
 
     const controlDecls = controls.map(controlUniformDecl);
     const passDecls = passes.map(p => `uniform sampler2D ${p.TARGET};`);
+    // Only declare a sampler for IMAGES entries the scene's GLSL actually
+    // references - scene.json can list images (e.g. Vein Melter's image45)
+    // that main.glsl never samples.
+    const images = sceneJson.IMAGES || [];
+    const imageDecls = images
+        .filter(img => new RegExp(`\\b${img.NAME}\\b`).test(glsl))
+        .map(img => `uniform sampler2D ${img.NAME};`);
     const adHoc = scanAdHocUniforms(script, knownNames);
     const adHocDecls = [...adHoc.entries()].map(([name, type]) => `uniform ${type} ${name};`);
 
@@ -111,6 +130,8 @@ export function generateWrapper({ glsl, sceneJson, script }) {
         '',
         ...passDecls,
         '',
+        ...imageDecls,
+        '',
         ...adHocDecls,
         '',
         'in vec2 v_uv;',
@@ -119,6 +140,54 @@ export function generateWrapper({ glsl, sceneJson, script }) {
         'vec2 _uv;',
         'vec2 _uvc;',
         'vec2 _xy;',
+        '',
+        // Synesthesia engine stdlib helpers - undocumented, reverse-engineered
+        // from call sites (no reference source available).
+        // _pulse: a windowed pulse peaking at 1.0 when x is within `width` of
+        // `center`, used for scanning-flash effects.
+        // _isMediaActive/_loadMedia/_textureMedia: always inactive/gray -
+        // this web port has no live video/webcam media source.
+        // _rotate: standard 2D rotation. _normalizeRGB: takes 0..255 channel
+        // values (call sites pass literals like _normalizeRGB(255,255,255)),
+        // not an already-normalized vec3. _rgb2hsv/_hsv2rgb: the standard
+        // Sam Hocevar one-liners - these two are exact, not approximations.
+        'float _pulse(float x, float center, float width) {',
+        '    return 1.0 - smoothstep(0.0, max(width, 0.0001), abs(x - center));',
+        '}',
+        'bool _isMediaActive() { return false; }',
+        'vec4 _loadMedia() { return texture(syn_Media, _uv); }',
+        'vec3 _textureMedia(vec2 uv) { return texture(syn_Media, uv).xyz; }',
+        'vec2 _rotate(vec2 v, float angle) {',
+        '    float s = sin(angle), c = cos(angle);',
+        '    return vec2(v.x * c - v.y * s, v.x * s + v.y * c);',
+        '}',
+        'vec3 _normalizeRGB(float r, float g, float b) { return vec3(r, g, b) / 255.0; }',
+        // GLSL ES 3.00 doesn\'t implicitly convert int literal arguments to
+        // float parameters - call sites like _normalizeRGB(255, 255, 255)
+        // need this overload, not just the float one above.
+        'vec3 _normalizeRGB(int r, int g, int b) { return vec3(r, g, b) / 255.0; }',
+        'float _fbm(vec3 p) {',
+        '    float sum = 0.0, amp = 0.5;',
+        '    for (int i = 0; i < 5; i++) {',
+        '        sum += amp * (sin(p.x) + sin(p.y * 1.3) + sin(p.z * 1.7)) / 3.0;',
+        '        p = p.yzx * 2.03 + 1.7;',
+        '        amp *= 0.5;',
+        '    }',
+        '    return sum * 0.5 + 0.5;',
+        '}',
+        'vec3 _rgb2hsv(vec3 c) {',
+        '    vec4 K = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);',
+        '    vec4 p = mix(vec4(c.bg, K.wz), vec4(c.gb, K.xy), step(c.b, c.g));',
+        '    vec4 q = mix(vec4(p.xyw, c.r), vec4(c.r, p.yzx), step(p.x, c.r));',
+        '    float d = q.x - min(q.w, q.y);',
+        '    float e = 1.0e-10;',
+        '    return vec3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);',
+        '}',
+        'vec3 _hsv2rgb(vec3 c) {',
+        '    vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);',
+        '    vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);',
+        '    return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);',
+        '}',
         '',
     ];
 
@@ -141,5 +210,6 @@ export function generateWrapper({ glsl, sceneJson, script }) {
         controlNames: controls.map(c => c.NAME),
         passTargets: passes.map(p => p.TARGET),
         adHocUniformNames: [...adHoc.keys()],
+        imageNames: images.filter(img => new RegExp(`\\b${img.NAME}\\b`).test(glsl)).map(img => img.NAME),
     };
 }

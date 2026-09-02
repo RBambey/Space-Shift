@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Local dev server for the Space Shift web port.
+"""Local dev server for Space Shift at Home (the browser-based web port).
 
 Serves the repo root (so relative fetches to ../Synesthesia/... resolve)
 with Cache-Control: no-store on every response. Plain `python3 -m
@@ -7,7 +7,7 @@ http.server` lets browsers cache the JS modules across reloads with no way
 to bust it short of a hard-refresh, which silently serves stale code while
 iterating - this avoids that entirely.
 
-Usage: python3 web/devserver.py [port]   (default port 8000)
+Usage: python3 "Space Shift at Home/devserver.py" [port]   (default port 8000)
 """
 import http.server
 import os
